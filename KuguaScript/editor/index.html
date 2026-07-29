@@ -257,19 +257,6 @@
             color: #e06c75;
         }
 
-        .tooltip {
-            position: fixed;
-            background: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            padding: 10px 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            pointer-events: none;
-            z-index: 1000;
-            max-width: 300px;
-            display: none;
-        }
-
         .status-bar {
             display: flex;
             justify-content: space-between;
@@ -325,7 +312,7 @@
                 <div class="panel-header">
                     <div class="panel-title">编译结果</div>
                 </div>
-                <textarea id="compiled" readonly placeholder="编译后的JavaScript代码将显示在这里..."></textarea>
+                <textarea id="compiled" readonly placeholder="编译后的JavaScript代码将显示在这里..." style="color: #fff;"></textarea>
             </div>
         </div>
         
@@ -335,17 +322,17 @@
             </div>
             <div class="output-content" id="output">等待运行...</div>
         </div>
-        
-        <div class="tooltip" id="tooltip"></div>
     </div>
 
+    <script src="kugua-compiler.js"></script>
     <script>
+        const compiler = new KuguaCompiler();
+
         const keywords = [
-            '如果', '否则', '否则如果', '是', '不是', '等于', '小于', '大于',
+            '如果', '否则', '是', '不是', '等于', '小于', '大于',
             '小于等于', '大于等于', '不大于', '不小于', '结果是', '输入',
             '重复', '循环', '结束', '返回', '说', '定义', '类', '之',
             '的', '第', '个', '项', '长度', '功能', '方法', '全新',
-            '正确', '真', '对', '错误', '错', '不对', '空', '没了',
             '并且', '或者', '就', '一直', '执行', '次', '开始于', '到',
             '为止', '每次', '增加', '追加', '去除', '包含', '等价于',
             '若', '为', '则', '和', '与', '或', '非', '用', '以', '可',
@@ -389,8 +376,8 @@
                     }
                 }
                 
-                if (char === '“' || char === '【') {
-                    const endChar = char === '“' ? '”' : '】';
+                if (char === '\u201C' || char === '\u3010') {
+                    const endChar = char === '\u201C' ? '\u201D' : '\u3011';
                     let end = i + 1;
                     while (end < source.length && source[end] !== endChar) {
                         if (source[end] === '\\') end++;
@@ -433,7 +420,7 @@
                     continue;
                 }
                 
-                if ('。，、：；（）【】《》？！…—'.includes(char)) {
+                if ('\u3002\uFF0C\u3001\uFF1A\uFF1B\uFF08\uFF09\u3010\u3011\u300A\u300B\uFF1F\uFF01\u2026\u2014'.includes(char)) {
                     result += '<span class="punctuation">' + escapeHtml(char) + '</span>';
                 } else {
                     result += escapeHtml(char);
@@ -442,7 +429,6 @@
             }
             
             highlight.innerHTML = result;
-            
             updateStatus();
         }
 
@@ -461,65 +447,33 @@
             document.getElementById('columnCount').textContent = currentColumn;
         }
 
-        async function compileCode() {
+        function compileCode() {
             const source = document.getElementById('source').value;
             const output = document.getElementById('output');
             const compiled = document.getElementById('compiled');
             
-            output.textContent = '正在编译...';
-            output.className = 'output-content';
-            
             try {
-                const response = await fetch('/compile', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ source: source })
-                });
-                
-                const result = await response.json();
-                
-                if (result.error) {
-                    output.textContent = result.error;
-                    output.className = 'output-content error';
-                    compiled.value = '';
-                } else {
-                    compiled.value = result.code;
-                    output.textContent = '编译成功！';
-                }
+                const jsCode = compiler.compile(source);
+                compiled.value = jsCode;
+                output.textContent = '编译成功！';
+                output.className = 'output-content';
             } catch (error) {
-                output.textContent = '编译失败: ' + error.message;
+                output.textContent = error.message;
                 output.className = 'output-content error';
+                compiled.value = '';
             }
         }
 
-        async function runCode() {
+        function runCode() {
             const source = document.getElementById('source').value;
             const output = document.getElementById('output');
             
-            output.textContent = '正在运行...';
-            output.className = 'output-content';
-            
             try {
-                const response = await fetch('/run', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ source: source })
-                });
-                
-                const result = await response.json();
-                
-                if (result.error) {
-                    output.textContent = result.error;
-                    output.className = 'output-content error';
-                } else {
-                    output.textContent = result.output || '(无输出)';
-                }
+                const result = compiler.run(source);
+                output.textContent = result || '(无输出)';
+                output.className = 'output-content';
             } catch (error) {
-                output.textContent = '运行失败: ' + error.message;
+                output.textContent = error.message;
                 output.className = 'output-content error';
             }
         }
@@ -552,17 +506,19 @@
         document.getElementById('source').addEventListener('keyup', updateStatus);
 
         async function loadFiles() {
+            const selector = document.getElementById('fileSelector');
+            selector.innerHTML = '<option value="">选择文件...</option>';
             try {
-                const response = await fetch('/files');
-                const files = await response.json();
-                const selector = document.getElementById('fileSelector');
-                selector.innerHTML = '<option value="">选择文件...</option>';
-                files.forEach(file => {
-                    const option = document.createElement('option');
-                    option.value = file.name;
-                    option.textContent = file.name;
-                    selector.appendChild(option);
-                });
+                const response = await fetch('manifest.json');
+                if (response.ok) {
+                    const files = await response.json();
+                    files.forEach(fileName => {
+                        const option = document.createElement('option');
+                        option.value = fileName;
+                        option.textContent = fileName;
+                        selector.appendChild(option);
+                    });
+                }
             } catch (error) {
                 console.error('加载文件列表失败:', error);
             }
@@ -574,13 +530,13 @@
             if (!fileName) return;
             
             try {
-                const response = await fetch(`/file?name=${encodeURIComponent(fileName)}`);
-                const result = await response.json();
-                if (result.error) {
-                    alert(result.error);
+                const response = await fetch('../test/' + encodeURIComponent(fileName));
+                if (!response.ok) {
+                    alert('文件不存在: ' + fileName);
                     return;
                 }
-                document.getElementById('source').value = result.content;
+                const content = await response.text();
+                document.getElementById('source').value = content;
                 updateHighlight();
                 document.getElementById('compiled').value = '';
                 document.getElementById('output').textContent = '等待运行...';
