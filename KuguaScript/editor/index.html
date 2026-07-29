@@ -106,6 +106,19 @@
             box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
         }
 
+        .btn-syntax {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-syntax:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(250, 112, 154, 0.4);
+        }
+
         .file-selector {
             padding: 8px 12px;
             border: none;
@@ -296,6 +309,7 @@
                         <button class="btn-compile" onclick="compileCode()">编译</button>
                         <button class="btn-run" onclick="runCode()">运行</button>
                         <button class="btn-clear" onclick="clearAll()">清空</button>
+                        <a href="/syntax.html" class="btn-syntax">语法规则</a>
                     </div>
                 </div>
                 <div style="position: relative; height: 400px; border-radius: 8px; overflow: hidden;">
@@ -324,7 +338,7 @@
         </div>
     </div>
 
-    <script src="kugua-compiler.js"></script>
+    <script src="/kugua-compiler.js"></script>
     <script>
         const compiler = new KuguaCompiler();
 
@@ -509,7 +523,7 @@
             const selector = document.getElementById('fileSelector');
             selector.innerHTML = '<option value="">选择文件...</option>';
             try {
-                const response = await fetch('manifest.json');
+                const response = await fetch('/manifest.json');
                 if (response.ok) {
                     const files = await response.json();
                     files.forEach(fileName => {
@@ -530,7 +544,7 @@
             if (!fileName) return;
             
             try {
-                const response = await fetch('../test/' + encodeURIComponent(fileName));
+                const response = await fetch('/test/' + encodeURIComponent(fileName));
                 if (!response.ok) {
                     alert('文件不存在: ' + fileName);
                     return;

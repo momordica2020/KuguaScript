@@ -7,6 +7,23 @@ const Compiler = require('./src/compiler');
 const compiler = new Compiler();
 const PORT = 3000;
 
+function getContentType(ext) {
+    const types = {
+        '.html': 'text/html; charset=utf-8',
+        '.css': 'text/css; charset=utf-8',
+        '.js': 'application/javascript; charset=utf-8',
+        '.json': 'application/json; charset=utf-8',
+        '.ks': 'text/plain; charset=utf-8',
+        '.svg': 'image/svg+xml',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.ico': 'image/x-icon'
+    };
+    return types[ext] || 'text/plain; charset=utf-8';
+}
+
 const server = http.createServer((req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
@@ -122,15 +139,22 @@ const server = http.createServer((req, res) => {
     const filePath = path.join(__dirname, pathname);
     fs.readFile(filePath, (err, content) => {
         if (err) {
-            res.writeHead(404);
-            res.end('Not found');
+            // 根路径找不到时，尝试从 editor 目录找
+            const editorPath = path.join(__dirname, 'editor', pathname);
+            fs.readFile(editorPath, (err2, content2) => {
+                if (err2) {
+                    res.writeHead(404);
+                    res.end('Not found');
+                } else {
+                    const ext = path.extname(editorPath);
+                    const contentType = getContentType(ext);
+                    res.writeHead(200, { 'Content-Type': contentType });
+                    res.end(content2);
+                }
+            });
         } else {
             const ext = path.extname(filePath);
-            let contentType = 'text/plain';
-            if (ext === '.html') contentType = 'text/html; charset=utf-8';
-            if (ext === '.css') contentType = 'text/css; charset=utf-8';
-            if (ext === '.js') contentType = 'application/javascript; charset=utf-8';
-            
+            const contentType = getContentType(ext);
             res.writeHead(200, { 'Content-Type': contentType });
             res.end(content);
         }
@@ -139,5 +163,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`服务器运行在 http://localhost:${PORT}`);
-    console.log('编辑器地址: http://localhost:3000');
+    console.log(`编辑器地址: http://localhost:${PORT}`);
 });

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>苦瓜脚本语言 - 语法规则</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e0e0e0;
+            line-height: 1.8;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 2.2em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 8px 16px;
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            color: #a0c4ff;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .back-link:hover {
+            background: rgba(102, 126, 234, 0.5);
+            transform: translateX(-3px);
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h2 {
+            color: #a0c4ff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+            padding-bottom: 8px;
+        }
+
+        h3 {
+            color: #e5c07b;
+            margin: 15px 0 10px 0;
+            font-size: 1.15em;
+        }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #98c379;
+            overflow-x: auto;
+            border-left: 3px solid #56b6c2;
+        }
+
+        .keyword {
+            color: #c678dd;
+            font-weight: bold;
+        }
+
+        .string {
+            color: #98c379;
+        }
+
+        .number {
+            color: #d19a66;
+        }
+
+        .punctuation {
+            color: #56b6c2;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        th, td {
+            padding: 10px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+            color: #a0c4ff;
+            font-weight: bold;
+        }
+
+        td {
+            color: #e0e0e0;
+        }
+
+        td code {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #56b6c2;
+        }
+
+        .note {
+            background: rgba(229, 192, 123, 0.1);
+            border-left: 3px solid #e5c07b;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            color: #e5c07b;
+            font-size: 0.95em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← 返回编辑器</a>
+        <h1>苦瓜脚本语言 语法规则</h1>
+
+        <div class="section">
+            <h2>一、基本结构</h2>
+            <p>苦瓜脚本语言使用全角中文标点作为语句分隔符，句号（。）结束一条语句，冒号（：）用于定义，分号（；）用于函数定义后。</p>
+            <div class="code-block">变量名：值。</div>
+            <div class="note">每条语句必须以句号（。）结尾。函数定义以分号（；）结尾后接函数体。</div>
+        </div>
+
+        <div class="section">
+            <h2>二、变量定义</h2>
+            <p>使用冒号（：）进行变量定义和赋值。</p>
+            <div class="code-block">数：42。
+字符串：“你好”。
+小数：3.14。</div>
+            <h3>数据类型</h3>
+            <table>
+                <tr><th>类型</th><th>示例</th><th>说明</th></tr>
+                <tr><td>整数</td><td><code>42</code></td><td>普通整数</td></tr>
+                <tr><td>小数</td><td><code>3.14</code></td><td>浮点数</td></tr>
+                <tr><td>字符串</td><td><code>“你好”</code></td><td>用中文引号括起</td></tr>
+                <tr><td>布尔值</td><td><code>正确</code> / <code>错误</code></td><td>也可用：真/假、对/错</td></tr>
+                <tr><td>空值</td><td><code>空</code></td><td>等同于 null</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>三、输出</h2>
+            <p>使用<span class="keyword">说</span>关键字输出内容，等同于 console.log。</p>
+            <div class="code-block">说（“你好，世界！”）。
+说（42）。
+说（变量）。</div>
+        </div>
+
+        <div class="section">
+            <h2>四、运算符</h2>
+            <h3>算术运算</h3>
+            <table>
+                <tr><th>运算</th><th>符号</th><th>示例</th></tr>
+                <tr><td>加法</td><td><code>+</code></td><td><code>1 + 2</code></td></tr>
+                <tr><td>减法</td><td><code>-</code></td><td><code>10 - 3</code></td></tr>
+                <tr><td>乘法</td><td><code>*</code></td><td><code>4 * 5</code></td></tr>
+                <tr><td>除法</td><td><code>/</code></td><td><code>20 / 4</code></td></tr>
+                <tr><td>取余</td><td><code>%</code></td><td><code>10 % 3</code></td></tr>
+            </table>
+            <h3>比较运算</h3>
+            <table>
+                <tr><th>含义</th><th>关键字</th><th>示例</th></tr>
+                <tr><td>小于</td><td><code>小于</code></td><td><code>1 小于 2</code></td></tr>
+                <tr><td>大于</td><td><code>大于</code></td><td><code>2 大于 1</code></td></tr>
+                <tr><td>等于</td><td><code>等于</code> / <code>是</code></td><td><code>1 等于 1</code></td></tr>
+                <tr><td>不等于</td><td><code>不是</code></td><td><code>1 不是 2</code></td></tr>
+                <tr><td>小于等于</td><td><code>小于等于</code> / <code>不大于</code></td><td><code>1 小于等于 1</code></td></tr>
+                <tr><td>大于等于</td><td><code>大于等于</code> / <code>不小于</code></td><td><code>1 大于等于 1</code></td></tr>
+            </table>
+            <h3>逻辑运算</h3>
+            <table>
+                <tr><th>含义</th><th>关键字</th><th>示例</th></tr>
+                <tr><td>与（AND）</td><td><code>并且</code> / 顿号<code>、</code></td><td><code>正确 并且 正确</code></td></tr>
+                <tr><td>或（OR）</td><td><code>或者</code> / 逗号<code>，</code></td><td><code>正确 或者 错误</code></td></tr>
+                <tr><td>非（NOT）</td><td><code>非</code></td><td><code>非 正确</code></td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>五、条件语句</h2>
+            <p>使用<span class="keyword">如果</span>、<span class="keyword">否则如果</span>、<span class="keyword">否则</span>进行条件判断。条件用括号（）括起，冒号（：）结尾。</p>
+            <div class="code-block">如果（成绩 大于等于 90）：
+    说（“优秀”）。
+否则如果（成绩 大于等于 60）：
+    说（“及格”）。
+否则：
+    说（“不及格”）。</div>
+            <div class="note">代码块通过缩进区分，子语句的缩进必须大于父语句。</div>
+        </div>
+
+        <div class="section">
+            <h2>六、循环语句</h2>
+            <h3>重复循环（for 循环）</h3>
+            <p>使用<span class="keyword">重复</span>关键字，语法：重复（开始于 变量=初值，到 条件 为止，每次 变量++）：</p>
+            <div class="code-block">重复（开始于i=0，到i小于5为止，每次i++）：
+    说（i）。</div>
+            <h3>循环次数（repeat-n）</h3>
+            <p>使用<span class="keyword">循环</span>关键字，语法：循环 N 次（变量）：</p>
+            <div class="code-block">循环 3 次（i）：
+    说（i）。</div>
+        </div>
+
+        <div class="section">
+            <h2>七、函数定义</h2>
+            <p>使用<span class="keyword">输入</span>关键字声明参数，参数名用中文引号括起，多个参数用顿号（、）分隔。函数体以分号（；）开始。<span class="keyword">结果是</span>用于返回值。</p>
+            <div class="code-block">问候函数：输入“名字”；
+    结果是“你好，” + 名字。
+
+说（问候函数（“苦瓜”））。</div>
+        </div>
+
+        <div class="section">
+            <h2>八、类（对象）定义</h2>
+            <p>类名后接冒号（：），内部通过缩进定义属性和方法。属性以句号（。）结尾，方法以分号（；）结尾。使用<span class="keyword">之</span>访问成员。</p>
+            <div class="code-block">计算器：
+    加法：输入“a”、“b”；
+        结果是a + b。
+    减法：输入“a”、“b”；
+        结果是a - b。
+
+说（计算器之加法（3，5））。</div>
+            <div class="note">类的方法内部暂不支持通过 this 访问类属性，方法只能使用自身参数和外部变量。</div>
+        </div>
+
+        <div class="section">
+            <h2>九、注释</h2>
+            <p>支持单行注释和多行块注释，语法与 JavaScript 相同。</p>
+            <div class="code-block">// 这是单行注释
+
+/* 这是多行注释
+   可以跨越多行 */</div>
+        </div>
+
+        <div class="section">
+            <h2>十、标点符号速查</h2>
+            <table>
+                <tr><th>标点</th><th>用途</th></tr>
+                <tr><td><code>。</code></td><td>语句结束（相当于分号 ;）</td></tr>
+                <tr><td><code>：</code></td><td>定义/赋值（相当于等号 =）</td></tr>
+                <tr><td><code>；</code></td><td>函数头结束，接函数体</td></tr>
+                <tr><td><code>，</code></td><td>参数分隔 / 逻辑或（OR）</td></tr>
+                <tr><td><code>、</code></td><td>参数分隔 / 逻辑与（AND）</td></tr>
+                <tr><td><code>（）</code></td><td>括号分组 / 函数调用</td></tr>
+                <tr><td><code>“”</code></td><td>字符串引号</td></tr>
+                <tr><td><code>【】</code></td><td>方括号字符串（等同引号）</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>十一、关键字列表</h2>
+            <table>
+                <tr><th>类别</th><th>关键字</th></tr>
+                <tr><td>控制流</td><td><code>如果</code> <code>否则</code> <code>重复</code> <code>循环</code> <code>结束</code> <code>次</code></td></tr>
+                <tr><td>循环控制</td><td><code>开始于</code> <code>到</code> <code>为止</code> <code>每次</code></td></tr>
+                <tr><td>函数</td><td><code>输入</code> <code>返回</code> <code>结果是</code> <code>说</code></td></tr>
+                <tr><td>类与对象</td><td><code>类</code> <code>之</code> <code>的</code></td></tr>
+                <tr><td>比较</td><td><code>小于</code> <code>大于</code> <code>等于</code> <code>是</code> <code>不是</code> <code>等价于</code></td></tr>
+                <tr><td>逻辑</td><td><code>并且</code> <code>或者</code> <code>非</code></td></tr>
+                <tr><td>布尔值</td><td><code>正确</code> <code>真</code> <code>对</code> <code>错误</code> <code>错</code> <code>不对</code></td></tr>
+                <tr><td>空值</td><td><code>空</code> <code>没了</code></td></tr>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
