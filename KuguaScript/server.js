@@ -29,16 +29,8 @@ const server = http.createServer((req, res) => {
     const pathname = parsedUrl.pathname;
 
     if (pathname === '/') {
-        const filePath = path.join(__dirname, 'editor', 'index.html');
-        fs.readFile(filePath, (err, content) => {
-            if (err) {
-                res.writeHead(500);
-                res.end('Error loading index.html');
-            } else {
-                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(content);
-            }
-        });
+        res.writeHead(302, { 'Location': '/editor/index.html' });
+        res.end();
         return;
     }
 
@@ -136,11 +128,12 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    const filePath = path.join(__dirname, pathname);
+    const decodedPath = decodeURIComponent(pathname);
+    const filePath = path.join(__dirname, decodedPath);
     fs.readFile(filePath, (err, content) => {
         if (err) {
             // 根路径找不到时，尝试从 editor 目录找
-            const editorPath = path.join(__dirname, 'editor', pathname);
+            const editorPath = path.join(__dirname, 'editor', decodedPath);
             fs.readFile(editorPath, (err2, content2) => {
                 if (err2) {
                     res.writeHead(404);
