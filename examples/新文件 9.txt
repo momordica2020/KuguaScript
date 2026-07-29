@@ -1,0 +1,54 @@
+ string getChaosRandomSentence(string str)
+ {
+     string[] sgn = new string[] { "\r\n", "。", "？", "！", "…", "——", "??", "...", "：", "?!", "???", "!!", "！！！" };
+     string result = "";
+     byte[] md5data = md5.ComputeHash(Encoding.UTF8.GetBytes(str));
+     int sentences = MyRandom.Next(1, 6);
+
+     for (int i = 0; i < sentences; i++)
+     {
+         int thislen = MyRandom.Next(0, 11);
+         StringBuilder thissentence = new StringBuilder();
+         int wordnum = 0;
+         while (thissentence.Length < thislen && wordnum < 5)
+         {
+             wordnum++;
+             if (MyRandom.Next(0, 100) > 80)
+             {
+                 thissentence.Append(chaosWord[MyRandom.Next(0, chaosWord.Count - 1)][0]);
+             }
+             else
+             {
+                 thissentence.Append(chaosXwb[MyRandom.Next(0, chaosXwb.Count - 1)]);
+             }
+         }
+         thissentence.Append(sgn[MyRandom.Next(sgn.Length)]);
+         result += thissentence.ToString();
+     }
+
+     return result;
+ }
+ 
+ 
+《取小万邦随机话》（（字符串）原始语句）：
+ 
+ （文本序列）标点=“\r\n”、“，”、“。”、“？”、“！”、“…”、“—”、“??”、“...”、“：”、“！！！”。
+ （文本）输出结果=“”；
+ （整数）句子总数=取随机数（1，6）；
+  循环句子总数次（次数i）：
+	 （整数）本句长度限制=取随机数（0，11）
+	 （文本构建器）本句=全新 文本构建器；
+	 （整数）单词数=0；
+	 如果 本句的长度 小于 本句长度限制，并且 单词数 小于5，
+	 就一直执行：
+		单词数增加1；
+		如果取随机数（0，100）大于80，那么：
+			输出结果——追加（混沌模式单词 第（取随机数（0，混沌模式单词的长度 - 1））个——第0个）；
+		否则：
+			输出结果——追加（小万邦模式单词 第（取随机数（0，小万邦模式单词的长度 - 1））个；
+		。
+	 。
+	 输出结果——追加（标点第（取随机数（标点的长度））个；
+ 输出结果+=本句的文本；
+以上。
+ 

@@ -1,0 +1,19 @@
+{
+  "name": "kuguascript",
+  "version": "1.0.0",
+  "description": "苦瓜脚本语言 - 纯中文脚本语言编译器",
+  "main": "src/compiler.js",
+  "scripts": {
+    "compile": "node cli.js",
+    "test": "node test/runner.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "compiler",
+    "chinese",
+    "scripting",
+    "language"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.js"></script>
+  <script>
+    Prism.languages.myLang = {
+      'comment': /\/\/.*?$/,
+      'string': /"(?:\\["\\]|[^\n"\\])*"/,
+      'keyword': /\b(let|if|else|function)\b/,
+      'number': /\b\d+\b/,
+      'operator': /[+\-*\/=]/,
+      'identifier': /[a-zA-Z_][a-zA-Z0-9_]*/,
+    };
+	
+	
+	const highlightedCode = Prism.highlight(code, Prism.languages.myLang, 'myLang');
+	console.log(highlightedCode);
+
+  </script>
+</head>
+<body>
+  <pre><code class="language-myLang">
+let x = 42;
+if (x > 10) {
+  x = x + 1;
+}
+
+  </code></pre>
+</body>
+</html>

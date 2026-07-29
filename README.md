@@ -1,2 +1,0 @@
-# KuguaScript
-KuguaScript
