@@ -1,309 +1,192 @@
+/**
+ * 苦瓜脚本语言 — 代码生成器
+ * 将AST转换为JavaScript代码
+ * 使用 generate(node) 返回字符串的方式替代全局 output 拼接
+ */
+const C = require('./constants');
+
 class CodeGenerator {
-    constructor() {
-        this.indentLevel = 0;
-        this.output = '';
-    }
-
     generate(node) {
-        this.output = '';
-        this.indentLevel = 0;
-        this.visit(node);
-        return this.output;
+        return this.visit(node);
     }
 
+    /**
+     * 访问AST节点并返回生成的代码字符串
+     */
     visit(node) {
         if (!node) return '';
-        
-        const method = `visit${node.type}`;
-        if (typeof this[method] === 'function') {
-            return this[method](node);
+
+        const handler = this.visitors[node.type];
+        if (handler) {
+            return handler.call(this, node);
         }
-        
-        throw new Error(`Unknown node type: ${node.type}`);
+
+        throw new Error(`未知节点类型: ${node.type}`);
     }
 
-    visitProgram(node) {
-        this.write('(function(console) {');
-        this.newLine();
-        this.indent();
-        
-        for (const statement of node.body) {
-            this.visit(statement);
-            this.newLine();
-        }
-        
-        this.dedent();
-        this.write('})(console);');
-    }
+    // ==================== 访问器注册表 ====================
+    // 添加新节点类型的代码生成规则时，在此注册即可
 
-    visitBlockStatement(node) {
-        this.write('{');
-        this.newLine();
-        this.indent();
-        
-        for (const statement of node.body) {
-            this.visit(statement);
-            this.newLine();
-        }
-        
-        this.dedent();
-        this.write('}');
-    }
+    get visitors() {
+        if (!this._visitors) {
+            this._visitors = {
+                // 程序根节点
+                [C.NodeType.Program]: (node) => {
+                    let code = '(function(console) {\n';
+                    for (const stmt of node.body) {
+                        code += '    ' + this.visit(stmt) + '\n';
+                    }
+                    code += '})(console);';
+                    return code;
+                },
 
-    visitIfStatement(node) {
-        this.write('if (');
-        this.visit(node.condition);
-        this.write(') ');
-        this.visit(node.consequent);
-        
-        if (node.alternate) {
-            this.newLine();
-            if (node.alternate.type === 'IfStatement') {
-                this.write('else ');
-                this.visit(node.alternate);
-            } else {
-                this.write('else ');
-                this.visit(node.alternate);
-            }
-        }
-    }
+                // 代码块
+                [C.NodeType.BlockStatement]: (node) => {
+                    let code = '{\n';
+                    for (const stmt of node.body) {
+                        code += '    ' + this.visit(stmt) + '\n';
+                    }
+                    code += '}';
+                    return code;
+                },
 
-    visitForStatement(node) {
-        this.write('for (');
-        
-        if (node.init) {
-            this.write('var ');
-            this.write(node.init.name);
-            this.write(' = ');
-            this.visit(node.init.value);
-        }
-        
-        this.write('; ');
-        
-        if (node.condition) {
-            this.visit(node.condition);
-        }
-        
-        this.write('; ');
-        
-        if (node.update) {
-            this.write(node.update.argument.name);
-            this.write(node.update.operator);
-        }
-        
-        this.write(') ');
-        this.visit(node.body);
-    }
+                // 条件语句
+                [C.NodeType.IfStatement]: (node) => {
+                    let code = `if (${this.visit(node.condition)}) ${this.visit(node.consequent)}`;
+                    if (node.alternate) {
+                        code += `\nelse ${this.visit(node.alternate)}`;
+                    }
+                    return code;
+                },
 
-    visitForOfStatement(node) {
-        this.write('for (var ');
-        this.write(node.left.name);
-        this.write(' = 0; ');
-        this.write(node.left.name);
-        this.write(' < ');
-        this.visit(node.right);
-        this.write('; ');
-        this.write(node.left.name);
-        this.write('++) ');
-        this.visit(node.body);
-    }
+                // for 循环（重复）
+                [C.NodeType.ForStatement]: (node) => {
+                    let init = '';
+                    if (node.init) {
+                        init = `var ${node.init.name} = ${this.visit(node.init.value)}`;
+                    }
+                    let cond = node.condition ? this.visit(node.condition) : '';
+                    let update = '';
+                    if (node.update) {
+                        update = `${node.update.argument.name}${node.update.operator}`;
+                    }
+                    return `for (${init}; ${cond}; ${update}) ${this.visit(node.body)}`;
+                },
 
-    visitReturnStatement(node) {
-        this.write('return ');
-        this.visit(node.argument);
-        this.write(';');
-    }
+                // 循环N次
+                [C.NodeType.ForOfStatement]: (node) => {
+                    const varName = node.left.name;
+                    return `for (var ${varName} = 0; ${varName} < ${this.visit(node.right)}; ${varName}++) ${this.visit(node.body)}`;
+                },
 
-    visitPrintStatement(node) {
-        this.write('console.log(');
-        this.visit(node.argument);
-        this.write(');');
-    }
+                // 返回语句
+                [C.NodeType.ReturnStatement]: (node) => {
+                    return `return ${this.visit(node.argument)};`;
+                },
 
-    visitBreakStatement(node) {
-        this.write('break;');
-    }
+                // 输出语句
+                [C.NodeType.PrintStatement]: (node) => {
+                    return `console.log(${this.visit(node.argument)});`;
+                },
 
-    visitFunctionDeclaration(node) {
-        this.write('function ');
-        this.write(node.name);
-        this.write('(');
-        
-        const params = [];
-        for (const param of node.params) {
-            params.push(param.name);
-        }
-        
-        this.write(params.join(', '));
-        this.write(') ');
-        this.visit(node.body);
-    }
+                // break 语句
+                [C.NodeType.BreakStatement]: () => 'break;',
 
-    visitClassProperty(node) {
-        this.write('var ');
-        this.write(node.name);
-        this.write(' = ');
-        this.visit(node.value);
-        this.write(';');
-    }
+                // 函数声明
+                [C.NodeType.FunctionDeclaration]: (node) => {
+                    const params = node.params.map(p => p.name).join(', ');
+                    return `function ${node.name}(${params}) ${this.visit(node.body)}`;
+                },
 
-    visitClassDeclaration(node) {
-        this.write('var ');
-        this.write(node.name);
-        this.write(' = {');
-        this.newLine();
-        this.indent();
-        
-        const body = node.body.body || node.body;
-        let first = true;
-        
-        for (const statement of body) {
-            if (!first) {
-                this.write(',');
-                this.newLine();
-            }
-            first = false;
-            
-            if (statement.type === 'FunctionDeclaration') {
-                this.write(statement.name);
-                this.write(': function(');
-                
-                const params = [];
-                for (const param of statement.params) {
-                    params.push(param.name);
+                // 类属性
+                [C.NodeType.ClassProperty]: (node) => {
+                    return `var ${node.name} = ${this.visit(node.value)};`;
+                },
+
+                // 类声明
+                [C.NodeType.ClassDeclaration]: (node) => {
+                    const body = node.body.body || node.body;
+                    const members = body.map(stmt => {
+                        if (stmt.type === C.NodeType.FunctionDeclaration) {
+                            const params = stmt.params.map(p => p.name).join(', ');
+                            return `${stmt.name}: function(${params}) ${this.visit(stmt.body)}`;
+                        } else if (stmt.type === C.NodeType.ClassProperty) {
+                            return `${stmt.name}: ${this.visit(stmt.value)}`;
+                        } else if (stmt.type === C.NodeType.AssignmentExpression) {
+                            return `${this.visit(stmt.left)}: ${this.visit(stmt.right)}`;
+                        }
+                        return null;
+                    }).filter(m => m !== null);
+
+                    return `var ${node.name} = {\n    ${members.join(',\n    ')}\n};`;
+                },
+
+                // 表达式语句
+                [C.NodeType.ExpressionStatement]: (node) => {
+                    return `${this.visit(node.expression)};`;
+                },
+
+                // 赋值表达式
+                [C.NodeType.AssignmentExpression]: (node) => {
+                    return `var ${this.visit(node.left)} = ${this.visit(node.right)}`;
+                },
+
+                // 逻辑表达式
+                [C.NodeType.LogicalExpression]: (node) => {
+                    return `(${this.visit(node.left)} ${node.operator} ${this.visit(node.right)})`;
+                },
+
+                // 二元表达式
+                [C.NodeType.BinaryExpression]: (node) => {
+                    return `(${this.visit(node.left)} ${node.operator} ${this.visit(node.right)})`;
+                },
+
+                // 一元表达式
+                [C.NodeType.UnaryExpression]: (node) => {
+                    return `${node.operator}${this.visit(node.argument)}`;
+                },
+
+                // 函数调用 — 使用 generate 返回值的方式，不再 save/restore output
+                [C.NodeType.CallExpression]: (node) => {
+                    const args = node.arguments.map(arg => this.visit(arg));
+                    return `${this.visit(node.callee)}(${args.join(', ')})`;
+                },
+
+                // 成员访问
+                [C.NodeType.MemberExpression]: (node) => {
+                    if (node.computed) {
+                        return `${this.visit(node.object)}[${this.visit(node.property)}]`;
+                    }
+                    return `${this.visit(node.object)}.${this.visit(node.property)}`;
+                },
+
+                // 标识符
+                [C.NodeType.Identifier]: (node) => node.name,
+
+                // 字面量
+                [C.NodeType.Literal]: (node) => {
+                    if (typeof node.value === 'string') {
+                        return '"' + node.value.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
+                    }
+                    if (node.value === null) return 'null';
+                    if (typeof node.value === 'boolean') return node.value ? 'true' : 'false';
+                    return String(node.value);
+                },
+
+                // 变量声明
+                [C.NodeType.VariableDeclaration]: (node) => {
+                    let code = `var ${node.name}`;
+                    if (node.value) code += ` = ${this.visit(node.value)}`;
+                    return code;
+                },
+
+                // 更新表达式
+                [C.NodeType.UpdateExpression]: (node) => {
+                    return `${this.visit(node.argument)}${node.operator}`;
                 }
-                
-                this.write(params.join(', '));
-                this.write(') ');
-                this.visit(statement.body);
-            } else if (statement.type === 'ClassProperty') {
-                this.write(statement.name);
-                this.write(': ');
-                this.visit(statement.value);
-            } else if (statement.type === 'AssignmentExpression') {
-                this.visit(statement.left);
-                this.write(': ');
-                this.visit(statement.right);
-            }
+            };
         }
-        
-        this.newLine();
-        this.dedent();
-        this.write('};');
-    }
-
-    visitExpressionStatement(node) {
-        this.visit(node.expression);
-        this.write(';');
-    }
-
-    visitAssignmentExpression(node) {
-        this.write('var ');
-        this.visit(node.left);
-        this.write(' = ');
-        this.visit(node.right);
-    }
-
-    visitLogicalExpression(node) {
-        this.write('(');
-        this.visit(node.left);
-        this.write(' ');
-        this.write(node.operator);
-        this.write(' ');
-        this.visit(node.right);
-        this.write(')');
-    }
-
-    visitBinaryExpression(node) {
-        this.write('(');
-        this.visit(node.left);
-        this.write(' ');
-        this.write(node.operator);
-        this.write(' ');
-        this.visit(node.right);
-        this.write(')');
-    }
-
-    visitUnaryExpression(node) {
-        this.write(node.operator);
-        this.visit(node.argument);
-    }
-
-    visitCallExpression(node) {
-        this.visit(node.callee);
-        this.write('(');
-        
-        const args = [];
-        const savedOutput = this.output;
-        for (const arg of node.arguments) {
-            this.output = '';
-            this.visit(arg);
-            args.push(this.output);
-        }
-        this.output = savedOutput;
-        
-        this.write(args.join(', '));
-        this.write(')');
-    }
-
-    visitMemberExpression(node) {
-        this.visit(node.object);
-        
-        if (node.computed) {
-            this.write('[');
-            this.visit(node.property);
-            this.write(']');
-        } else {
-            this.write('.');
-            this.visit(node.property);
-        }
-    }
-
-    visitIdentifier(node) {
-        this.write(node.name);
-    }
-
-    visitLiteral(node) {
-        if (typeof node.value === 'string') {
-            this.write('"' + node.value.replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"');
-        } else if (node.value === null) {
-            this.write('null');
-        } else if (typeof node.value === 'boolean') {
-            this.write(node.value ? 'true' : 'false');
-        } else {
-            this.write(String(node.value));
-        }
-    }
-
-    visitVariableDeclaration(node) {
-        this.write('var ');
-        this.write(node.name);
-        if (node.value) {
-            this.write(' = ');
-            this.visit(node.value);
-        }
-    }
-
-    visitUpdateExpression(node) {
-        this.visit(node.argument);
-        this.write(node.operator);
-    }
-
-    write(text) {
-        this.output += text;
-    }
-
-    newLine() {
-        this.output += '\n';
-        this.output += '    '.repeat(this.indentLevel);
-    }
-
-    indent() {
-        this.indentLevel++;
-    }
-
-    dedent() {
-        this.indentLevel--;
+        return this._visitors;
     }
 }
 

@@ -1,3 +1,10 @@
+/**
+ * 苦瓜脚本语言 — 词法分析器
+ * 将源代码转换为令牌流，支持中文关键词、全角标点
+ */
+const C = require('./constants');
+const { createToken } = require('./ast');
+
 class Lexer {
     constructor(source) {
         this.source = source;
@@ -5,62 +12,40 @@ class Lexer {
         this.line = 1;
         this.column = 1;
         this.tokens = [];
-        this.keywords = [
-            '如果', '否则', '是', '不是', '等于', '小于', '大于',
-            '小于等于', '大于等于', '不大于', '不小于', '结果是', '输入',
-            '重复', '循环', '结束', '返回', '说', '定义', '类', '之',
-            '的', '第', '个', '项', '长度', '功能', '方法', '全新',
-            '并且', '或者', '就', '一直', '执行', '次', '开始于', '到',
-            '为止', '每次', '增加', '追加', '去除', '包含', '等价于',
-            '若', '为', '则', '和', '与', '或', '非', '用', '以', '可',
-            '使', '让', '被', '把', '将', '给', '向', '从', '在', '上',
-            '下', '左', '右', '前', '后', '中', '内', '外', '间', '时',
-            '间', '的话', '而已', '而已矣', '罢了', '罢了罢了'
-        ];
-        this.booleanKeywords = {
-            '正确': true, '正确的': true, '真': true, '真的': true, '对': true, '对的': true,
-            '错误': false, '错误的': false, '错': false, '错的': false, '不对': false, '不对的': false
-        };
-        this.nullKeywords = ['空', '空的', '没了'];
-        this.operators = [
-            '+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^', '~'
-        ];
-        this.punctuation = [
-            '。', '，', '、', '：', '；', '（', '）', '【', '】', '《', '》',
-            '？', '！', '…', '—', '\r\n', '\n', '\r', ' '
-        ];
     }
 
     tokenize() {
         while (this.position < this.source.length) {
             const current = this.peek();
-            
-            if (current === '/') {
-                if (this.peekNext() === '/') {
-                    this.skipLineComment();
-                    continue;
-                } else if (this.peekNext() === '*') {
-                    this.skipBlockComment();
-                    continue;
-                }
-            }
 
-            if (current === '“') {
-                this.tokens.push(this.readString());
+            // 注释
+            if (current === '/' && this.peekNext() === '/') {
+                this.skipLineComment();
+                continue;
+            }
+            if (current === '/' && this.peekNext() === '*') {
+                this.skipBlockComment();
                 continue;
             }
 
-            if (current === '【') {
+            // 字符串
+            if (current === '\u201C') {
+                this.tokens.push(this.readString());
+                continue;
+            }
+            if (current === '\u3010') {
                 this.tokens.push(this.readBracketString());
                 continue;
             }
 
-            if (this.isDigit(current)) {
+            // 数字
+            if (C.isDigit(current)) {
                 this.tokens.push(this.readNumber());
                 continue;
             }
 
-            if (this.isIdentifierStart(current)) {
+            // 标识符和关键字
+            if (C.isIdentifierStart(current)) {
                 const idTokens = this.readIdentifierOrKeywords();
                 for (const token of idTokens) {
                     this.tokens.push(token);
@@ -68,40 +53,29 @@ class Lexer {
                 continue;
             }
 
-            if (this.operators.includes(current)) {
-                this.tokens.push({
-                    type: 'OPERATOR',
-                    value: current,
-                    line: this.line,
-                    column: this.column
-                });
+            // 运算符
+            if (C.Operators.includes(current)) {
+                this.tokens.push(createToken(C.TokenType.OPERATOR, current, this.line, this.column));
                 this.advance();
                 continue;
             }
 
-            if (current === '。' || current === '，' || current === '、' || current === '：' || current === '；' || current === '？' || current === '《' || current === '》' || current === '—' || current === '！') {
-                this.tokens.push({
-                    type: 'PUNCTUATION',
-                    value: current,
-                    line: this.line,
-                    column: this.column
-                });
+            // 标点符号
+            if (C.Punctuations.includes(current)) {
+                this.tokens.push(createToken(C.TokenType.PUNCTUATION, current, this.line, this.column));
                 this.advance();
                 continue;
             }
 
-            if (current === '（' || current === '）') {
-                this.tokens.push({
-                    type: 'PAREN',
-                    value: current,
-                    line: this.line,
-                    column: this.column
-                });
+            // 括号
+            if (current === C.LeftParen || current === C.RightParen) {
+                this.tokens.push(createToken(C.TokenType.PAREN, current, this.line, this.column));
                 this.advance();
                 continue;
             }
 
-            if (this.isWhitespace(current)) {
+            // 空白
+            if (C.isWhitespace(current)) {
                 this.advance();
                 continue;
             }
@@ -109,15 +83,11 @@ class Lexer {
             throw new Error(`未知字符: ${current} 在第 ${this.line} 行，第 ${this.column} 列`);
         }
 
-        this.tokens.push({
-            type: 'EOF',
-            value: '',
-            line: this.line,
-            column: this.column
-        });
-
+        this.tokens.push(createToken(C.TokenType.EOF, '', this.line, this.column));
         return this.tokens;
     }
+
+    // ==================== 字符操作 ====================
 
     peek() {
         return this.source[this.position] || '';
@@ -139,21 +109,7 @@ class Lexer {
         return current;
     }
 
-    isWhitespace(char) {
-        return [' ', '\t', '\n', '\r'].includes(char);
-    }
-
-    isDigit(char) {
-        return /[0-9]/.test(char);
-    }
-
-    isIdentifierStart(char) {
-        return /[\u4e00-\u9fa5a-zA-Z_]/.test(char);
-    }
-
-    isIdentifierPart(char) {
-        return /[\u4e00-\u9fa5a-zA-Z0-9_]/.test(char);
-    }
+    // ==================== 读取方法 ====================
 
     readNumber() {
         let value = '';
@@ -167,52 +123,37 @@ class Lexer {
                 if (hasDecimal) break;
                 hasDecimal = true;
                 value += this.advance();
-            } else if (this.isDigit(current)) {
+            } else if (C.isDigit(current)) {
                 value += this.advance();
             } else {
                 break;
             }
         }
 
-        return {
-            type: 'NUMBER',
-            value: hasDecimal ? parseFloat(value) : parseInt(value),
-            line: startLine,
-            column: startColumn
-        };
+        return createToken(C.TokenType.NUMBER, hasDecimal ? parseFloat(value) : parseInt(value), startLine, startColumn);
     }
 
     readString() {
         let value = '';
         const startLine = this.line;
         const startColumn = this.column;
-
-        this.advance();
+        this.advance(); // 跳过开头引号
 
         while (this.position < this.source.length) {
             const current = this.peek();
-            
+
+            // 转义字符
             if (current === '\\') {
                 this.advance();
                 const next = this.peek();
-                if (next === '“') {
-                    value += '“';
-                } else if (next === '\\') {
-                    value += '\\';
-                } else if (next === 'n') {
-                    value += '\n';
-                } else if (next === 'r') {
-                    value += '\r';
-                } else if (next === 't') {
-                    value += '\t';
-                } else {
-                    value += '\\' + next;
-                }
+                const escapeMap = { '\u201C': '\u201C', '\\': '\\', 'n': '\n', 'r': '\r', 't': '\t' };
+                value += escapeMap[next] !== undefined ? escapeMap[next] : '\\' + next;
                 this.advance();
                 continue;
             }
 
-            if (current === '”') {
+            // 闭合引号
+            if (current === '\u201D') {
                 this.advance();
                 break;
             }
@@ -220,68 +161,44 @@ class Lexer {
             value += this.advance();
         }
 
-        return {
-            type: 'STRING',
-            value: value,
-            line: startLine,
-            column: startColumn
-        };
+        return createToken(C.TokenType.STRING, value, startLine, startColumn);
     }
 
     readBracketString() {
         let value = '';
         const startLine = this.line;
         const startColumn = this.column;
-
-        this.advance();
+        this.advance(); // 跳过【
 
         while (this.position < this.source.length) {
-            const current = this.peek();
-            
-            if (current === '】') {
+            if (this.peek() === '\u3011') {
                 this.advance();
                 break;
             }
-
             value += this.advance();
         }
 
-        return {
-            type: 'STRING',
-            value: value,
-            line: startLine,
-            column: startColumn
-        };
+        return createToken(C.TokenType.STRING, value, startLine, startColumn);
     }
+
+    // ==================== 标识符与关键字识别 ====================
 
     readIdentifierOrKeywords() {
         const tokens = [];
 
-        while (this.position < this.source.length && this.isIdentifierPart(this.peek())) {
-            if (this.isDigit(this.peek())) {
+        while (this.position < this.source.length && C.isIdentifierPart(this.peek())) {
+            if (C.isDigit(this.peek())) {
                 tokens.push(this.readNumber());
             } else {
-                // 先检查布尔值和空值关键字
-                const booleanToken = this.matchBooleanKeyword();
-                if (booleanToken) {
-                    tokens.push(booleanToken);
+                // 按优先级依次匹配：布尔值 → 空值 → 普通关键字 → 标识符
+                const matched = this.matchKeywordSet(C.BooleanKeywords, C.TokenType.BOOLEAN)
+                    || this.matchKeywordSet(C.NullKeywords, C.TokenType.NULL, null)
+                    || this.matchLongestKeyword();
+
+                if (matched) {
+                    tokens.push(matched);
                 } else {
-                    const nullToken = this.matchNullKeyword();
-                    if (nullToken) {
-                        tokens.push(nullToken);
-                    } else {
-                        const matched = this.matchLongestKeyword();
-                        if (matched) {
-                            tokens.push({
-                                type: 'KEYWORD',
-                                value: matched.value,
-                                line: matched.line,
-                                column: matched.column
-                            });
-                        } else {
-                            tokens.push(this.readIdentifier());
-                        }
-                    }
+                    tokens.push(this.readIdentifier());
                 }
             }
         }
@@ -289,16 +206,22 @@ class Lexer {
         return tokens;
     }
 
-    matchBooleanKeyword() {
-        const startLine = this.line;
-        const startColumn = this.column;
+    /**
+     * 通用关键字集匹配 — 替代原来三个重复方法
+     * @param {Object|Array} keywordSet — 关键字映射表（布尔值）或数组（空值）
+     * @param {string} tokenType — 匹配成功时的令牌类型
+     * @param {*} tokenValue — 令牌值（不传则从映射表中取）
+     */
+    matchKeywordSet(keywordSet, tokenType, tokenValue) {
+        const keys = Array.isArray(keywordSet) ? keywordSet : Object.keys(keywordSet);
         let matchedKey = null;
         let matchedLength = 0;
 
-        for (const key of Object.keys(this.booleanKeywords)) {
+        for (const key of keys) {
             if (this.source.startsWith(key, this.position)) {
+                // 检查关键字后面不是标识符字符（防止部分匹配）
                 const nextChar = this.source[this.position + key.length];
-                if (nextChar && this.isIdentifierPart(nextChar)) continue;
+                if (nextChar && C.isIdentifierPart(nextChar)) continue;
                 if (key.length > matchedLength) {
                     matchedKey = key;
                     matchedLength = key.length;
@@ -306,51 +229,17 @@ class Lexer {
             }
         }
 
-        if (matchedKey) {
-            for (let i = 0; i < matchedLength; i++) {
-                this.advance();
-            }
-            return {
-                type: 'BOOLEAN',
-                value: this.booleanKeywords[matchedKey],
-                line: startLine,
-                column: startColumn
-            };
-        }
+        if (!matchedKey) return null;
 
-        return null;
-    }
-
-    matchNullKeyword() {
         const startLine = this.line;
         const startColumn = this.column;
-        let matchedKey = null;
-        let matchedLength = 0;
-
-        for (const key of this.nullKeywords) {
-            if (this.source.startsWith(key, this.position)) {
-                const nextChar = this.source[this.position + key.length];
-                if (nextChar && this.isIdentifierPart(nextChar)) continue;
-                if (key.length > matchedLength) {
-                    matchedKey = key;
-                    matchedLength = key.length;
-                }
-            }
+        for (let i = 0; i < matchedLength; i++) {
+            this.advance();
         }
 
-        if (matchedKey) {
-            for (let i = 0; i < matchedLength; i++) {
-                this.advance();
-            }
-            return {
-                type: 'NULL',
-                value: null,
-                line: startLine,
-                column: startColumn
-            };
-        }
-
-        return null;
+        // 如果是映射表，取对应的值；否则用传入的 tokenValue
+        const value = tokenValue !== undefined ? tokenValue : keywordSet[matchedKey];
+        return createToken(tokenType, value, startLine, startColumn);
     }
 
     matchLongestKeyword() {
@@ -359,7 +248,7 @@ class Lexer {
         let matchedKeyword = null;
         let matchedLength = 0;
 
-        for (const keyword of this.keywords) {
+        for (const keyword of C.AllKeywords) {
             if (this.source.startsWith(keyword, this.position)) {
                 if (keyword.length > matchedLength) {
                     matchedKeyword = keyword;
@@ -368,18 +257,12 @@ class Lexer {
             }
         }
 
-        if (matchedKeyword) {
-            for (let i = 0; i < matchedLength; i++) {
-                this.advance();
-            }
-            return {
-                value: matchedKeyword,
-                line: startLine,
-                column: startColumn
-            };
-        }
+        if (!matchedKeyword) return null;
 
-        return null;
+        for (let i = 0; i < matchedLength; i++) {
+            this.advance();
+        }
+        return createToken(C.TokenType.KEYWORD, matchedKeyword, startLine, startColumn);
     }
 
     readIdentifier() {
@@ -387,9 +270,10 @@ class Lexer {
         const startLine = this.line;
         const startColumn = this.column;
 
-        while (this.position < this.source.length && this.isIdentifierPart(this.peek())) {
+        while (this.position < this.source.length && C.isIdentifierPart(this.peek())) {
+            // 遇到关键字前缀时停止
             let hasKeywordPrefix = false;
-            for (const keyword of this.keywords) {
+            for (const keyword of C.AllKeywords) {
                 if (this.source.startsWith(keyword, this.position)) {
                     hasKeywordPrefix = true;
                     break;
@@ -399,13 +283,10 @@ class Lexer {
             value += this.advance();
         }
 
-        return {
-            type: 'IDENTIFIER',
-            value: value,
-            line: startLine,
-            column: startColumn
-        };
+        return createToken(C.TokenType.IDENTIFIER, value, startLine, startColumn);
     }
+
+    // ==================== 注释跳过 ====================
 
     skipLineComment() {
         while (this.position < this.source.length && this.peek() !== '\n') {
@@ -419,7 +300,6 @@ class Lexer {
     skipBlockComment() {
         this.advance();
         this.advance();
-
         while (this.position < this.source.length) {
             if (this.peek() === '*' && this.peekNext() === '/') {
                 this.advance();
