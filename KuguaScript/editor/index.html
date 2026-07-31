@@ -5,6 +5,54 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>苦瓜脚本语言编辑器</title>
     <style>
+        /* ========== 昼夜主题变量 ========== */
+        :root {
+            --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            --panel-bg: rgba(255, 255, 255, 0.05);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #aaa;
+            --highlight-bg: rgba(0, 0, 0, 0.35);
+            --status-bg: rgba(0, 0, 0, 0.35);
+            --output-bg: rgba(0, 0, 0, 0.35);
+            --color-keyword: #c678dd;
+            --color-string: #98c379;
+            --color-number: #d19a66;
+            --color-boolean: #e5c07b;
+            --color-null: #6a9955;
+            --color-comment: #5c6370;
+            --color-punctuation: #56b6c2;
+            --color-identifier: #e06c75;
+            --color-log: #00ff88;
+            --color-error: #ff4444;
+            --selector-bg: rgba(255, 255, 255, 0.1);
+            --selector-option-bg: #1a1a2e;
+            --sandbox-bg: #ffffff;
+        }
+        body.light-mode {
+            --bg-primary: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            --panel-border: rgba(0, 0, 0, 0.08);
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --highlight-bg: rgba(255, 255, 255, 0.7);
+            --status-bg: rgba(0, 0, 0, 0.05);
+            --output-bg: rgba(250, 250, 250, 0.9);
+            --color-keyword: #a626a4;
+            --color-string: #50a14f;
+            --color-number: #986801;
+            --color-boolean: #c18401;
+            --color-null: #50a14f;
+            --color-comment: #a0a1a7;
+            --color-punctuation: #0184bc;
+            --color-identifier: #e45649;
+            --color-log: #22863a;
+            --color-error: #cb2431;
+            --selector-bg: rgba(0, 0, 0, 0.06);
+            --selector-option-bg: #ffffff;
+            --sandbox-bg: #ffffff;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,9 +61,10 @@
 
         body {
             font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            background: var(--bg-primary);
             min-height: 100vh;
-            padding: 20px;
+            padding: 12px;
+            transition: background 0.3s ease;
         }
 
         .container {
@@ -25,137 +74,121 @@
 
         h1 {
             text-align: center;
-            color: #fff;
-            margin-bottom: 20px;
-            font-size: 2.5em;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 1.8em;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
         }
 
         .editor-wrapper {
             display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 12px;
+            margin-bottom: 12px;
         }
 
         .panel {
             flex: 1;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: var(--panel-bg);
+            border-radius: 10px;
+            padding: 10px;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
         }
 
         .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--panel-border);
         }
 
         .panel-title {
-            color: #fff;
-            font-size: 1.2em;
+            color: var(--text-primary);
+            font-size: 1.05em;
             font-weight: bold;
         }
 
         .panel-actions {
             display: flex;
-            gap: 10px;
+            gap: 6px;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         button {
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
 
         .btn-compile {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
         }
-
-        .btn-compile:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
+        .btn-compile:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(102, 126, 234, 0.35); }
 
         .btn-run {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: #fff;
         }
-
-        .btn-run:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
-        }
+        .btn-run:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(17, 153, 142, 0.35); }
 
         .btn-clear {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: #fff;
         }
-
-        .btn-clear:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
-        }
+        .btn-clear:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(240, 147, 251, 0.35); }
 
         .btn-syntax {
             background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
             color: #fff;
             text-decoration: none;
-            display: flex;
+            display: inline-flex;
             align-items: center;
         }
+        .btn-syntax:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(250, 112, 154, 0.35); }
 
-        .btn-syntax:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(250, 112, 154, 0.4);
+        .btn-theme {
+            background: linear-gradient(135deg, #434343 0%, #000000 100%);
+            color: #fff;
         }
+        body.light-mode .btn-theme {
+            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+        }
+        .btn-theme:hover { transform: translateY(-1px); }
 
         .file-selector {
-            padding: 8px 12px;
+            padding: 6px 10px;
             border: none;
             border-radius: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            font-size: 14px;
+            background: var(--selector-bg);
+            color: var(--text-primary);
+            font-size: 13px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
         }
-
-        .file-selector:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .file-selector:focus {
-            outline: none;
-            border: 1px solid rgba(102, 126, 234, 0.5);
-        }
-
-        .file-selector option {
-            background: #1a1a2e;
-            color: #fff;
-        }
+        .file-selector:hover { background: rgba(102, 126, 234, 0.2); }
+        .file-selector:focus { outline: none; border: 1px solid rgba(102, 126, 234, 0.5); }
+        .file-selector option { background: var(--selector-option-bg); color: var(--text-primary); }
 
         textarea {
             width: 100%;
-            height: 400px;
+            height: 340px;
             background: transparent;
             border: none;
             border-radius: 8px;
-            padding: 15px;
+            padding: 12px;
             color: transparent;
-            caret-color: #fff;
+            caret-color: var(--text-primary);
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            line-height: 1.55;
             resize: none;
             outline: none;
             position: relative;
@@ -163,141 +196,114 @@
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
+        textarea::-webkit-scrollbar { display: none; }
+        textarea:focus { border: 1px solid rgba(102, 126, 234, 0.4); }
 
-        textarea::-webkit-scrollbar {
-            display: none;
+        .code-wrap {
+            position: relative;
+            height: 340px;
+            border-radius: 8px;
+            overflow: hidden;
         }
 
-        textarea:focus {
-            border: 1px solid rgba(102, 126, 234, 0.5);
-        }
-
-        .output-panel {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 15px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .output-panel, .sandbox-panel {
+            background: var(--panel-bg);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 12px;
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--panel-border);
         }
 
         .output-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--panel-border);
         }
 
         .output-title {
-            color: #fff;
-            font-size: 1.2em;
+            color: var(--text-primary);
+            font-size: 1.05em;
             font-weight: bold;
         }
 
         .output-content {
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--output-bg);
             border-radius: 8px;
-            padding: 15px;
-            min-height: 150px;
-            max-height: 300px;
+            padding: 10px 12px;
+            min-height: 120px;
+            max-height: 260px;
             overflow-y: auto;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
+            font-size: 13px;
             line-height: 1.6;
-            color: #00ff88;
+            color: var(--color-log);
+            white-space: pre-wrap;
+            word-break: break-all;
         }
-
-        .output-content.error {
-            color: #ff4444;
-        }
+        .output-content.error { color: var(--color-error); }
+        .output-line { display: block; margin-bottom: 2px; }
+        .output-ts { color: var(--text-secondary); font-size: 11px; margin-right: 8px; }
 
         .syntax-highlight {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            padding: 15px;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 12px;
             font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            line-height: 1.6;
+            font-size: 13px;
+            line-height: 1.55;
             white-space: pre-wrap;
             word-wrap: break-word;
             pointer-events: none;
             overflow: auto;
-            background: rgba(0, 0, 0, 0.3);
+            background: var(--highlight-bg);
             border-radius: 8px;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            /* 默认文字颜色 — 修复暗底黑字看不清问题 */
+            color: var(--text-primary);
         }
+        .syntax-highlight::-webkit-scrollbar { display: none; }
 
-        .syntax-highlight::-webkit-scrollbar {
-            display: none;
-        }
-
-        .keyword {
-            color: #c678dd;
-            font-weight: bold;
-        }
-
-        .string {
-            color: #98c379;
-        }
-
-        .number {
-            color: #d19a66;
-        }
-
-        .boolean {
-            color: #e5c07b;
-        }
-
-        .null {
-            color: #6a9955;
-        }
-
-        .comment {
-            color: #5c6370;
-            font-style: italic;
-        }
-
-        .punctuation {
-            color: #56b6c2;
-        }
-
-        .identifier {
-            color: #e06c75;
-        }
+        .keyword { color: var(--color-keyword); font-weight: bold; }
+        .string { color: var(--color-string); }
+        .number { color: var(--color-number); }
+        .boolean { color: var(--color-boolean); }
+        .null { color: var(--color-null); }
+        .comment { color: var(--color-comment); font-style: italic; }
+        .punctuation { color: var(--color-punctuation); }
+        .identifier { color: var(--color-identifier); }
 
         .status-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 10px;
-            padding: 10px 15px;
-            background: rgba(0, 0, 0, 0.3);
+            margin-top: 8px;
+            padding: 6px 12px;
+            background: var(--status-bg);
             border-radius: 8px;
-            color: #aaa;
+            color: var(--text-secondary);
             font-size: 12px;
         }
+        .status-item { display: flex; align-items: center; gap: 5px; }
+        .status-item span { font-weight: bold; color: var(--text-primary); }
 
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .status-item span {
-            font-weight: bold;
-            color: #fff;
+        .sandbox-frame {
+            width: 100%;
+            height: 320px;
+            background: var(--sandbox-bg);
+            border-radius: 8px;
+            border: 1px solid var(--panel-border);
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>苦瓜脚本语言编辑器</h1>
-        
+
         <div class="editor-wrapper">
             <div class="panel">
                 <div class="panel-header">
@@ -310,9 +316,10 @@
                         <button class="btn-run" onclick="runCode()">运行</button>
                         <button class="btn-clear" onclick="clearAll()">清空</button>
                         <a href="syntax.html" class="btn-syntax">语法规则</a>
+                        <button class="btn-theme" onclick="toggleTheme()" title="切换昼夜模式">☾</button>
                     </div>
                 </div>
-                <div style="position: relative; height: 400px; border-radius: 8px; overflow: hidden;">
+                <div class="code-wrap">
                     <div class="syntax-highlight" id="highlight"></div>
                     <textarea id="source" oninput="updateHighlight()" placeholder="在此输入苦瓜脚本代码..."></textarea>
                 </div>
@@ -321,18 +328,29 @@
                     <div class="status-item">列数: <span id="columnCount">1</span></div>
                 </div>
             </div>
-            
+
             <div class="panel">
                 <div class="panel-header">
                     <div class="panel-title">编译结果</div>
                 </div>
-                <textarea id="compiled" readonly placeholder="编译后的JavaScript代码将显示在这里..." style="color: #fff;"></textarea>
+                <textarea id="compiled" readonly placeholder="编译后的JavaScript代码将显示在这里..." style="color: var(--text-primary);"></textarea>
             </div>
         </div>
-        
+
+        <!-- 沙箱视图（在运行输出之上，便于点击按钮时同步看到输出） -->
+        <div class="sandbox-panel">
+            <div class="output-header">
+                <div class="output-title">沙箱视图（脚本操作的页面）</div>
+                <button class="btn-clear" onclick="resetSandbox()">重置沙箱</button>
+            </div>
+            <iframe id="sandbox" class="sandbox-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+        </div>
+
+        <!-- 运行输出（在沙箱之下，便于顺序观察） -->
         <div class="output-panel">
             <div class="output-header">
                 <div class="output-title">运行输出</div>
+                <button class="btn-clear" onclick="clearOutput()">清空输出</button>
             </div>
             <div class="output-content" id="output">等待运行...</div>
         </div>
@@ -341,6 +359,196 @@
     <script src="kugua-compiler.js"></script>
     <script>
         const compiler = new KuguaCompiler();
+
+        // ===== 昼夜主题切换 =====
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+            const isLight = document.body.classList.contains('light-mode');
+            const btn = document.querySelector('.btn-theme');
+            btn.textContent = isLight ? '☀' : '☾';
+            btn.title = isLight ? '切换为夜间模式' : '切换为日间模式';
+            try { localStorage.setItem('ks-theme', isLight ? 'light' : 'dark'); } catch(e) {}
+        }
+        // 加载保存的主题
+        try {
+            const saved = localStorage.getItem('ks-theme');
+            if (saved === 'light') {
+                document.body.classList.add('light-mode');
+                document.querySelector('.btn-theme') && (document.querySelector('.btn-theme').textContent = '☀');
+            }
+        } catch(e) {}
+
+        // ===== 日期时间格式化 =====
+        function formatTimestamp(d) {
+            const pad = n => n < 10 ? '0' + n : '' + n;
+            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
+                + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        }
+
+        // ===== 带时间戳的输出追加 =====
+        function appendOutput(text, isError) {
+            const output = document.getElementById('output');
+            if (output.textContent === '等待运行...' || output.textContent === '沙箱已重置，等待运行...') {
+                output.textContent = '';
+            }
+            const ts = formatTimestamp(new Date());
+            // 每行都加时间戳和换行
+            const lines = String(text).split('\n');
+            for (const line of lines) {
+                const div = document.createElement('div');
+                div.className = 'output-line';
+                div.innerHTML = '<span class="output-ts">[' + ts + ']</span>' + escapeHtml(line);
+                output.appendChild(div);
+            }
+            output.className = 'output-content' + (isError ? ' error' : '');
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // ===== iframe 沙箱运行器 =====
+        const SANDBOX_BOOTSTRAP = `
+            <script>
+                var _logs = [];
+                console.log = function() {
+                    var msg = Array.prototype.slice.call(arguments).join(' ');
+                    _logs.push(msg);
+                    parent.postMessage({ type: 'ks-log', text: msg }, '*');
+                };
+                console.error = function() {
+                    var msg = '[错误] ' + Array.prototype.slice.call(arguments).join(' ');
+                    parent.postMessage({ type: 'ks-error', text: msg }, '*');
+                };
+                window.onerror = function(msg, src, line, col) {
+                    parent.postMessage({ type: 'ks-error', text: msg + ' (行' + line + ')' }, '*');
+                    return true;
+                };
+
+                window.文档 = document;
+                window.窗口 = window;
+                window.本地存储 = localStorage;
+                window.会话存储 = sessionStorage;
+                window.数学 = Math;
+                window.日期 = Date;
+                window.历史 = history;
+                window.控制台 = console;
+                window.屏幕 = screen;
+                window.定位 = location;
+                window.弹窗 = typeof alert !== 'undefined' ? alert : function(msg) { console.log(msg); };
+                window.询问 = typeof prompt !== 'undefined' ? prompt : function(msg) { console.log('[输入]' + msg); return '1'; };
+                window.确认 = typeof confirm !== 'undefined' ? confirm : function(msg) { console.log('[确认]' + msg); return true; };
+                window.写入 = typeof document !== 'undefined' ? function(msg) { document.write(msg); } : function(msg) { console.log(msg); };
+                window.随机数字 = Math.random;
+                window.向下取整 = Math.floor;
+                window.向上取整 = Math.ceil;
+                window.绝对值 = Math.abs;
+                window.转整数 = parseInt;
+                window.转数字 = parseFloat;
+                // 定时器/动画帧（游戏循环需要）
+                window.设置定时器 = setTimeout;
+                window.清除定时器 = clearTimeout;
+                window.设置循环 = setInterval;
+                window.清除循环 = clearInterval;
+                window.startLoop = setInterval;
+                window.stopLoop = clearInterval;
+                window.setT = setTimeout;
+                window.clearT = clearTimeout;
+                window.请求动画帧 = (typeof requestAnimationFrame !== 'undefined') ? requestAnimationFrame : function(cb) { return setTimeout(cb, 16); };
+                window.取消动画帧 = (typeof cancelAnimationFrame !== 'undefined') ? cancelAnimationFrame : clearTimeout;
+
+                document.获取元素按id = document.getElementById;
+                document.获取元素按标签 = document.getElementsByTagName;
+                document.获取元素按类名 = document.getElementsByClassName;
+                document.创建元素 = document.createElement;
+                document.创建文本节点 = document.createTextNode;
+                document.获取元素按选择器 = document.querySelector;
+                document.获取所有元素按选择器 = document.querySelectorAll;
+                document.身体 = document.body;
+                document.头部 = document.head;
+                document.标题 = document.title;
+
+                var ElProto = Element.prototype;
+                ElProto.设置文本 = function(t) { this.textContent = t; return this; };
+                ElProto.设置HTML = function(h) { this.innerHTML = h; return this; };
+                ElProto.获取文本 = function() { return this.textContent; };
+                ElProto.获取HTML = function() { return this.innerHTML; };
+                ElProto.添加事件监听 = function(type, fn) { this.addEventListener(type, fn); return this; };
+                ElProto.移除事件监听 = function(type, fn) { this.removeEventListener(type, fn); return this; };
+                ElProto.追加子节点 = function(c) { this.appendChild(c); return this; };
+                ElProto.移除子节点 = function(c) { this.removeChild(c); return this; };
+                ElProto.设置样式 = function(k, v) { this.style[k] = v; return this; };
+                ElProto.获取样式 = function(k) { return this.style[k]; };
+                ElProto.设置属性 = function(k, v) { this.setAttribute(k, v); return this; };
+                ElProto.获取属性 = function(k) { return this.getAttribute(k); };
+                ElProto.添加类名 = function(c) { this.classList.add(c); return this; };
+                ElProto.移除类名 = function(c) { this.classList.remove(c); return this; };
+
+                window.添加事件监听 = function(type, fn) { this.addEventListener(type, fn); return this; };
+                window.移除事件监听 = function(type, fn) { this.removeEventListener(type, fn); return this; };
+
+                Storage.prototype.读取 = Storage.prototype.getItem;
+                Storage.prototype.保存 = Storage.prototype.setItem;
+                Storage.prototype.删除 = Storage.prototype.removeItem;
+
+                parent.postMessage({ type: 'ks-ready' }, '*');
+
+                window.addEventListener('message', function(e) {
+                    if (e.data && e.data.type === 'ks-run') {
+                        try {
+                            var fn = new Function(e.data.code);
+                            fn();
+                            parent.postMessage({ type: 'ks-done' }, '*');
+                        } catch (err) {
+                            parent.postMessage({ type: 'ks-error', text: err.message }, '*');
+                        }
+                    }
+                });
+            <\/script>
+        `;
+
+        const sandboxFrame = document.getElementById('sandbox');
+        let sandboxReady = false;
+        let pendingCode = null;
+
+        function initSandbox() {
+            sandboxReady = false;
+            sandboxFrame.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:10px;color:#000}</style></head><body>' + SANDBOX_BOOTSTRAP + '</body></html>';
+        }
+        function resetSandbox() {
+            initSandbox();
+            const output = document.getElementById('output');
+            output.textContent = '沙箱已重置，等待运行...';
+            output.className = 'output-content';
+        }
+        function clearOutput() {
+            document.getElementById('output').textContent = '';
+        }
+
+        // 监听沙箱消息
+        window.addEventListener('message', function(e) {
+            const data = e.data;
+            if (!data) return;
+            if (data.type === 'ks-ready') {
+                sandboxReady = true;
+                if (pendingCode) {
+                    sandboxFrame.contentWindow.postMessage({ type: 'ks-run', code: pendingCode }, '*');
+                    pendingCode = null;
+                }
+            } else if (data.type === 'ks-log') {
+                appendOutput(data.text, false);
+            } else if (data.type === 'ks-error') {
+                appendOutput(data.text, true);
+            }
+        });
+
+        function runInSandbox(jsCode) {
+            const output = document.getElementById('output');
+            output.textContent = '';
+            output.className = 'output-content';
+            if (sandboxReady) {
+                sandboxFrame.contentWindow.postMessage({ type: 'ks-run', code: jsCode }, '*');
+            } else {
+                pendingCode = jsCode;
+            }
+        }
 
         const keywords = [
             '如果', '否则', '是', '不是', '等于', '小于', '大于',
@@ -352,9 +560,8 @@
             '若', '为', '则', '和', '与', '或', '非', '用', '以', '可',
             '使', '让', '被', '把', '将', '给', '向', '从', '在', '上',
             '下', '左', '右', '前', '后', '中', '内', '外', '间', '时',
-            '间', '的话', '而已', '而已矣', '罢了', '罢了罢了'
+            '的话', '而已', '而已矣', '罢了', '罢了罢了'
         ];
-
         const booleans = ['正确', '正确的', '真', '真的', '对', '对的', '错误', '错误的', '错', '错的', '不对', '不对的'];
         const nulls = ['空', '空的', '没了'];
 
@@ -367,13 +574,11 @@
         function updateHighlight() {
             const source = document.getElementById('source').value;
             const highlight = document.getElementById('highlight');
-            
             let result = '';
             let i = 0;
-            
+
             while (i < source.length) {
                 const char = source[i];
-                
                 if (char === '/') {
                     if (source[i + 1] === '/') {
                         const end = source.indexOf('\n', i);
@@ -389,7 +594,6 @@
                         continue;
                     }
                 }
-                
                 if (char === '\u201C' || char === '\u3010') {
                     const endChar = char === '\u201C' ? '\u201D' : '\u3011';
                     let end = i + 1;
@@ -402,14 +606,10 @@
                     i = end + 1;
                     continue;
                 }
-                
                 if (/[\u4e00-\u9fa5a-zA-Z_]/.test(char)) {
                     let j = i;
-                    while (j < source.length && /[\u4e00-\u9fa5a-zA-Z0-9_]/.test(source[j])) {
-                        j++;
-                    }
+                    while (j < source.length && /[\u4e00-\u9fa5a-zA-Z0-9_]/.test(source[j])) j++;
                     const word = source.substring(i, j);
-                    
                     if (keywords.includes(word)) {
                         result += '<span class="keyword">' + escapeHtml(word) + '</span>';
                     } else if (booleans.includes(word)) {
@@ -422,18 +622,14 @@
                     i = j;
                     continue;
                 }
-                
                 if (/[0-9]/.test(char)) {
                     let j = i;
-                    while (j < source.length && (/[0-9.]/.test(source[j]))) {
-                        j++;
-                    }
+                    while (j < source.length && /[0-9.]/.test(source[j])) j++;
                     const num = source.substring(i, j);
                     result += '<span class="number">' + escapeHtml(num) + '</span>';
                     i = j;
                     continue;
                 }
-                
                 if ('\u3002\uFF0C\u3001\uFF1A\uFF1B\uFF08\uFF09\u3010\u3011\u300A\u300B\uFF1F\uFF01\u2026\u2014'.includes(char)) {
                     result += '<span class="punctuation">' + escapeHtml(char) + '</span>';
                 } else {
@@ -441,7 +637,6 @@
                 }
                 i++;
             }
-            
             highlight.innerHTML = result;
             updateStatus();
         }
@@ -449,46 +644,35 @@
         function updateStatus() {
             const source = document.getElementById('source').value;
             const lines = source.split('\n');
-            const lineCount = lines.length;
-            
             const textarea = document.getElementById('source');
             const cursorPos = textarea.selectionStart;
             const beforeCursor = source.substring(0, cursorPos);
-            const currentLine = beforeCursor.split('\n').length;
-            const currentColumn = beforeCursor.length - beforeCursor.lastIndexOf('\n');
-            
-            document.getElementById('lineCount').textContent = lineCount;
-            document.getElementById('columnCount').textContent = currentColumn;
+            document.getElementById('lineCount').textContent = lines.length;
+            document.getElementById('columnCount').textContent = beforeCursor.length - beforeCursor.lastIndexOf('\n');
         }
 
         function compileCode() {
             const source = document.getElementById('source').value;
             const output = document.getElementById('output');
             const compiled = document.getElementById('compiled');
-            
             try {
                 const jsCode = compiler.compile(source);
                 compiled.value = jsCode;
-                output.textContent = '编译成功！';
-                output.className = 'output-content';
+                appendOutput('编译成功！', false);
             } catch (error) {
-                output.textContent = error.message;
-                output.className = 'output-content error';
+                appendOutput(error.message, true);
                 compiled.value = '';
             }
         }
 
         function runCode() {
             const source = document.getElementById('source').value;
-            const output = document.getElementById('output');
-            
             try {
-                const result = compiler.run(source);
-                output.textContent = result || '(无输出)';
-                output.className = 'output-content';
+                const jsCode = compiler.compile(source);
+                document.getElementById('compiled').value = jsCode;
+                runInSandbox(jsCode);
             } catch (error) {
-                output.textContent = error.message;
-                output.className = 'output-content error';
+                appendOutput(error.message, true);
             }
         }
 
@@ -497,25 +681,24 @@
             document.getElementById('compiled').value = '';
             document.getElementById('output').textContent = '等待运行...';
             document.getElementById('output').className = 'output-content';
+            resetSandbox();
             updateHighlight();
         }
 
         document.getElementById('source').addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
                 e.preventDefault();
-                const start = this.selectionStart;
-                const end = this.selectionEnd;
+                const start = this.selectionStart, end = this.selectionEnd;
                 this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
                 this.selectionStart = this.selectionEnd = start + 4;
+                updateHighlight();
             }
         });
-
         document.getElementById('source').addEventListener('scroll', function() {
             const highlight = document.getElementById('highlight');
             highlight.scrollTop = this.scrollTop;
             highlight.scrollLeft = this.scrollLeft;
         });
-
         document.getElementById('source').addEventListener('click', updateStatus);
         document.getElementById('source').addEventListener('keyup', updateStatus);
 
@@ -533,31 +716,23 @@
                         selector.appendChild(option);
                     });
                 }
-            } catch (error) {
-                console.error('加载文件列表失败:', error);
-            }
+            } catch (error) { console.error('加载文件列表失败:', error); }
         }
 
         async function loadFile() {
             const selector = document.getElementById('fileSelector');
             const fileName = selector.value;
             if (!fileName) return;
-            
             try {
                 const response = await fetch('../test/' + encodeURIComponent(fileName));
-                if (!response.ok) {
-                    alert('文件不存在: ' + fileName);
-                    return;
-                }
+                if (!response.ok) { alert('文件不存在: ' + fileName); return; }
                 const content = await response.text();
                 document.getElementById('source').value = content;
                 updateHighlight();
                 document.getElementById('compiled').value = '';
                 document.getElementById('output').textContent = '等待运行...';
                 document.getElementById('output').className = 'output-content';
-            } catch (error) {
-                alert('加载文件失败: ' + error.message);
-            }
+            } catch (error) { alert('加载文件失败: ' + error.message); }
         }
 
         const sampleCode = `// 苦瓜脚本示例
@@ -575,12 +750,13 @@
 数学：
     加法：输入“a”、“b”；
         结果是a + b。
-    
+
 说（数学之加法（3，5））。`;
 
         document.getElementById('source').value = sampleCode;
         updateHighlight();
         loadFiles();
+        initSandbox();
     </script>
 </body>
 </html>

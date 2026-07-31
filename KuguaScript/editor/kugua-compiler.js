@@ -1,6 +1,14 @@
 // 苦瓜脚本语言编译器 - 浏览器版本（自动生成，请勿手动编辑）
+// 使用 IIFE 包裹，通过 window 或 globalThis 导出
+(function(global) {
 
 // ==================== 常量定义（来源：constants.js） ====================
+
+/**
+ * 苦瓜脚本语言 — 全局常量定义
+ * 所有语言关键字、运算符、令牌类型、AST节点类型的唯一数据源
+ * 添加新语言特性时，只需在此文件中注册即可
+ */
 
 // ==================== 令牌类型 ====================
 const TokenType = {
@@ -91,6 +99,16 @@ const LogicalAndKeywords = ['并且'];      // &&
 const LogicalOrKeywords = ['或者'];        // ||
 const LogicalNotKeywords = ['非'];         // !
 
+// 运算符类关键字（比较、相等、逻辑）— 始终完整识别为关键字，不作为标识符的一部分
+// 这样 "i小于3" 会正确拆分为 "i" + "小于" + "3"，"a是b" 会拆分为 "a" + "是" + "b"
+const OperatorKeywords = [
+    ...Object.keys(ComparisonOperators),
+    ...Object.keys(EqualityOperators),
+    ...LogicalAndKeywords,
+    ...LogicalOrKeywords,
+    ...LogicalNotKeywords
+];
+
 // 布尔值关键字 → JS布尔值
 const BooleanKeywords = {
     '正确': true, '正确的': true, '真': true, '真的': true, '对': true, '对的': true,
@@ -125,6 +143,17 @@ const AllKeywords = [
     '而已矣', '罢了', '罢了罢了'
 ];
 
+// 保留关键字（未实际在语法中使用，仅预留）
+// 词法分析器在识别这些关键字时会检查后继字符，
+// 若后跟标识符字符则不识别为关键字，避免阻断标识符识别
+const ReservedKeywords = [
+    '定义', '个', '长度', '功能', '方法', '全新', '就', '一直', '执行',
+    '增加', '追加', '去除', '包含', '为', '则', '和', '与', '或', '用', '以',
+    '可', '使', '让', '被', '把', '将', '给', '向', '从', '在', '上', '下',
+    '左', '右', '前', '后', '中', '内', '外', '间', '时', '的话', '而已',
+    '而已矣', '罢了', '罢了罢了'
+];
+
 // ==================== 运算符 ====================
 const Operators = ['+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^', '~'];
 
@@ -150,36 +179,24 @@ function isIdentifierPart(char) {
     return /[\u4e00-\u9fa5a-zA-Z0-9_]/.test(char);
 }
 
-// ==================== 常量全局导出 ====================
+// ==================== 导出 ====================
+
 const C = {
-    TokenType,
-    NodeType,
-    ControlKeywords,
-    LoopKeywords,
-    FunctionKeywords,
-    ObjectKeywords,
-    AccessKeywords,
-    ComparisonOperators,
-    EqualityOperators,
-    LogicalAndKeywords,
-    LogicalOrKeywords,
-    LogicalNotKeywords,
+    TokenType, NodeType, ControlKeywords, LoopKeywords, FunctionKeywords,
+    ObjectKeywords, AccessKeywords, ComparisonOperators, EqualityOperators,
+    LogicalAndKeywords, LogicalOrKeywords, LogicalNotKeywords, OperatorKeywords,
     BooleanKeywords,
-    NullKeywords,
-    IfAliases,
-    ReturnAliases,
-    AllKeywords,
-    Operators,
-    Punctuations,
-    LeftParen,
-    RightParen,
-    isWhitespace,
-    isDigit,
-    isIdentifierStart,
-    isIdentifierPart
+    NullKeywords, IfAliases, ReturnAliases, AllKeywords, ReservedKeywords,
+    Operators, Punctuations, LeftParen, RightParen, isWhitespace, isDigit,
+    isIdentifierStart, isIdentifierPart
 };
 
 // ==================== AST 节点工厂函数（来源：ast.js） ====================
+
+/**
+ * 苦瓜脚本语言 — AST 节点工厂函数
+ * 统一节点创建方式，减少散落的对象字面量
+ */
 
 function createNode(type, props = {}) {
     return { type, ...props };
@@ -190,122 +207,108 @@ function createToken(type, value, line, column) {
 }
 
 function createProgram(body) {
-    return createNode(C.NodeType.Program, { body });
+    return createNode(NodeType.Program, { body });
 }
 
 function createBlockStatement(body) {
-    return createNode(C.NodeType.BlockStatement, { body });
+    return createNode(NodeType.BlockStatement, { body });
 }
 
 function createIfStatement(condition, consequent, alternate) {
-    return createNode(C.NodeType.IfStatement, { condition, consequent, alternate });
+    return createNode(NodeType.IfStatement, { condition, consequent, alternate });
 }
 
 function createForStatement(init, condition, update, body) {
-    return createNode(C.NodeType.ForStatement, { init, condition, update, body });
+    return createNode(NodeType.ForStatement, { init, condition, update, body });
 }
 
 function createForOfStatement(left, right, body) {
-    return createNode(C.NodeType.ForOfStatement, { left, right, body });
+    return createNode(NodeType.ForOfStatement, { left, right, body });
 }
 
 function createReturnStatement(argument) {
-    return createNode(C.NodeType.ReturnStatement, { argument });
+    return createNode(NodeType.ReturnStatement, { argument });
 }
 
 function createPrintStatement(argument) {
-    return createNode(C.NodeType.PrintStatement, { argument });
+    return createNode(NodeType.PrintStatement, { argument });
 }
 
 function createBreakStatement() {
-    return createNode(C.NodeType.BreakStatement);
+    return createNode(NodeType.BreakStatement);
 }
 
 function createFunctionDeclaration(name, params, body) {
-    return createNode(C.NodeType.FunctionDeclaration, { name, params, body });
+    return createNode(NodeType.FunctionDeclaration, { name, params, body });
 }
 
 function createClassDeclaration(name, body) {
-    return createNode(C.NodeType.ClassDeclaration, { name, body });
+    return createNode(NodeType.ClassDeclaration, { name, body });
 }
 
 function createClassProperty(name, value) {
-    return createNode(C.NodeType.ClassProperty, { name, value });
+    return createNode(NodeType.ClassProperty, { name, value });
 }
 
 function createExpressionStatement(expression) {
-    return createNode(C.NodeType.ExpressionStatement, { expression });
+    return createNode(NodeType.ExpressionStatement, { expression });
 }
 
 function createAssignmentExpression(left, right) {
-    return createNode(C.NodeType.AssignmentExpression, { left, right });
+    return createNode(NodeType.AssignmentExpression, { left, right });
 }
 
 function createLogicalExpression(operator, left, right) {
-    return createNode(C.NodeType.LogicalExpression, { operator, left, right });
+    return createNode(NodeType.LogicalExpression, { operator, left, right });
 }
 
 function createBinaryExpression(operator, left, right) {
-    return createNode(C.NodeType.BinaryExpression, { operator, left, right });
+    return createNode(NodeType.BinaryExpression, { operator, left, right });
 }
 
 function createUnaryExpression(operator, argument) {
-    return createNode(C.NodeType.UnaryExpression, { operator, argument });
+    return createNode(NodeType.UnaryExpression, { operator, argument });
 }
 
 function createCallExpression(callee, args) {
-    return createNode(C.NodeType.CallExpression, { callee, arguments: args });
+    return createNode(NodeType.CallExpression, { callee, arguments: args });
 }
 
 function createMemberExpression(object, property, computed) {
-    return createNode(C.NodeType.MemberExpression, { object, property, computed });
+    return createNode(NodeType.MemberExpression, { object, property, computed });
 }
 
 function createIdentifier(name) {
-    return createNode(C.NodeType.Identifier, { name });
+    return createNode(NodeType.Identifier, { name });
 }
 
 function createLiteral(value, raw) {
-    return createNode(C.NodeType.Literal, { value, raw });
+    return createNode(NodeType.Literal, { value, raw });
 }
 
 function createVariableDeclaration(name, value) {
-    return createNode(C.NodeType.VariableDeclaration, { name, value });
+    return createNode(NodeType.VariableDeclaration, { name, value });
 }
 
 function createUpdateExpression(operator, argument) {
-    return createNode(C.NodeType.UpdateExpression, { operator, argument });
+    return createNode(NodeType.UpdateExpression, { operator, argument });
 }
 
-// ==================== AST 全局导出 ====================
 const AST = {
-    createNode,
-    createToken,
-    createProgram,
-    createBlockStatement,
-    createIfStatement,
-    createForStatement,
-    createForOfStatement,
-    createReturnStatement,
-    createPrintStatement,
-    createBreakStatement,
-    createFunctionDeclaration,
-    createClassDeclaration,
-    createClassProperty,
-    createExpressionStatement,
-    createAssignmentExpression,
-    createLogicalExpression,
-    createBinaryExpression,
-    createUnaryExpression,
-    createCallExpression,
-    createMemberExpression,
-    createIdentifier,
-    createLiteral,
-    createVariableDeclaration,
-    createUpdateExpression
+    createNode, createToken, createProgram, createBlockStatement, createIfStatement,
+    createForStatement, createForOfStatement, createReturnStatement, createPrintStatement,
+    createBreakStatement, createFunctionDeclaration, createClassDeclaration, createClassProperty,
+    createExpressionStatement, createAssignmentExpression, createLogicalExpression,
+    createBinaryExpression, createUnaryExpression, createCallExpression, createMemberExpression,
+    createIdentifier, createLiteral, createVariableDeclaration, createUpdateExpression
 };
 
 // ==================== 词法分析器（来源：lexer.js） ====================
+
+/**
+ * 苦瓜脚本语言 — 词法分析器
+ * 将源代码转换为令牌流，支持中文关键词、全角标点
+ */
 
 class Lexer {
     constructor(source) {
@@ -357,21 +360,21 @@ class Lexer {
 
             // 运算符
             if (C.Operators.includes(current)) {
-                this.tokens.push(AST.createToken(C.TokenType.OPERATOR, current, this.line, this.column));
+                this.tokens.push(createToken(C.TokenType.OPERATOR, current, this.line, this.column));
                 this.advance();
                 continue;
             }
 
             // 标点符号
             if (C.Punctuations.includes(current)) {
-                this.tokens.push(AST.createToken(C.TokenType.PUNCTUATION, current, this.line, this.column));
+                this.tokens.push(createToken(C.TokenType.PUNCTUATION, current, this.line, this.column));
                 this.advance();
                 continue;
             }
 
             // 括号
             if (current === C.LeftParen || current === C.RightParen) {
-                this.tokens.push(AST.createToken(C.TokenType.PAREN, current, this.line, this.column));
+                this.tokens.push(createToken(C.TokenType.PAREN, current, this.line, this.column));
                 this.advance();
                 continue;
             }
@@ -385,7 +388,7 @@ class Lexer {
             throw new Error(`未知字符: ${current} 在第 ${this.line} 行，第 ${this.column} 列`);
         }
 
-        this.tokens.push(AST.createToken(C.TokenType.EOF, '', this.line, this.column));
+        this.tokens.push(createToken(C.TokenType.EOF, '', this.line, this.column));
         return this.tokens;
     }
 
@@ -432,7 +435,7 @@ class Lexer {
             }
         }
 
-        return AST.createToken(C.TokenType.NUMBER, hasDecimal ? parseFloat(value) : parseInt(value), startLine, startColumn);
+        return createToken(C.TokenType.NUMBER, hasDecimal ? parseFloat(value) : parseInt(value), startLine, startColumn);
     }
 
     readString() {
@@ -463,7 +466,7 @@ class Lexer {
             value += this.advance();
         }
 
-        return AST.createToken(C.TokenType.STRING, value, startLine, startColumn);
+        return createToken(C.TokenType.STRING, value, startLine, startColumn);
     }
 
     readBracketString() {
@@ -480,7 +483,7 @@ class Lexer {
             value += this.advance();
         }
 
-        return AST.createToken(C.TokenType.STRING, value, startLine, startColumn);
+        return createToken(C.TokenType.STRING, value, startLine, startColumn);
     }
 
     // ==================== 标识符与关键字识别 ====================
@@ -541,7 +544,7 @@ class Lexer {
 
         // 如果是映射表，取对应的值；否则用传入的 tokenValue
         const value = tokenValue !== undefined ? tokenValue : keywordSet[matchedKey];
-        return AST.createToken(tokenType, value, startLine, startColumn);
+        return createToken(tokenType, value, startLine, startColumn);
     }
 
     matchLongestKeyword() {
@@ -552,6 +555,13 @@ class Lexer {
 
         for (const keyword of C.AllKeywords) {
             if (this.source.startsWith(keyword, this.position)) {
+                // 保留关键字（未实际使用）在后面紧跟标识符字符时不识别为关键字
+                // 这样 "追加子节点" 不会被拆成 "追加" + "子节点"
+                // 真正使用的关键字（在 ReservedKeywords 之外的）始终识别
+                if (C.ReservedKeywords.includes(keyword)) {
+                    const nextChar = this.source[this.position + keyword.length];
+                    if (nextChar && C.isIdentifierPart(nextChar)) continue;
+                }
                 if (keyword.length > matchedLength) {
                     matchedKeyword = keyword;
                     matchedLength = keyword.length;
@@ -564,7 +574,7 @@ class Lexer {
         for (let i = 0; i < matchedLength; i++) {
             this.advance();
         }
-        return AST.createToken(C.TokenType.KEYWORD, matchedKeyword, startLine, startColumn);
+        return createToken(C.TokenType.KEYWORD, matchedKeyword, startLine, startColumn);
     }
 
     readIdentifier() {
@@ -573,19 +583,48 @@ class Lexer {
         const startColumn = this.column;
 
         while (this.position < this.source.length && C.isIdentifierPart(this.peek())) {
-            // 遇到关键字前缀时停止
+            // 成员访问操作符"之"/"的"始终停止标识符读取
+            if (this.source.startsWith('之', this.position) || this.source.startsWith('的', this.position)) {
+                break;
+            }
+            // 遇到完整关键字前缀时停止
+            // 但如果已读取了字符且关键字后跟标识符字符，则视为标识符一部分继续读取
+            // 例如 "点击次数" 中 "次" 是关键字，但 "点击次" 后还有 "数"，应继续读取
             let hasKeywordPrefix = false;
             for (const keyword of C.AllKeywords) {
+                if (keyword === '之' || keyword === '的') continue;
                 if (this.source.startsWith(keyword, this.position)) {
-                    hasKeywordPrefix = true;
-                    break;
+                    let isComplete = true;
+                    if (C.ReservedKeywords.includes(keyword)) {
+                        const nextChar = this.source[this.position + keyword.length];
+                        if (nextChar && C.isIdentifierPart(nextChar)) {
+                            isComplete = false;
+                        }
+                    } else if (value.length > 0) {
+                        // 已读取字符时，检查关键字后是否还有标识符字符
+                        // 但运算符类关键字（比较、相等、逻辑）始终视为完整关键字
+                        // 这样 "i小于3" 会正确拆分为 "i" + "小于" + "3"
+                        // 而 "点击次数" 中 "次" 不是运算符，后跟 "数" 时仍视为标识符一部分
+                        if (C.OperatorKeywords.includes(keyword)) {
+                            // 运算符类关键字始终完整识别，保持 isComplete = true
+                        } else {
+                            const nextChar = this.source[this.position + keyword.length];
+                            if (nextChar && C.isIdentifierPart(nextChar)) {
+                                isComplete = false;
+                            }
+                        }
+                    }
+                    if (isComplete) {
+                        hasKeywordPrefix = true;
+                        break;
+                    }
                 }
             }
             if (hasKeywordPrefix) break;
             value += this.advance();
         }
 
-        return AST.createToken(C.TokenType.IDENTIFIER, value, startLine, startColumn);
+        return createToken(C.TokenType.IDENTIFIER, value, startLine, startColumn);
     }
 
     // ==================== 注释跳过 ====================
@@ -614,6 +653,12 @@ class Lexer {
 }
 
 // ==================== 语法分析器（来源：parser.js） ====================
+
+/**
+ * 苦瓜脚本语言 — 语法分析器
+ * 将令牌流解析为抽象语法树（AST）
+ * 使用注册表模式分发语句解析，便于扩展新语句类型
+ */
 
 class Parser {
     constructor(tokens) {
@@ -706,15 +751,42 @@ class Parser {
             return this[this.statementHandlers[token.value]]();
         }
 
-        // 变量定义：标识符后跟冒号
-        if (token.type === C.TokenType.IDENTIFIER) {
-            const next = this.peekNext();
-            if (next && next.value === '：') {
-                return this.parseDefinition();
-            }
+        // 变量/成员赋值定义：标识符（之属性）后跟冒号
+        if (token.type === C.TokenType.IDENTIFIER && this.isDefinitionStart()) {
+            return this.parseDefinition();
         }
 
         return this.parseExpressionStatement();
+    }
+
+    /**
+     * 向前探测是否为定义语句
+     * 匹配模式：标识符（之/的 属性名）* ：
+     * 属性名可以是标识符或关键字
+     * 不消耗令牌，只读取判断
+     */
+    isDefinitionStart() {
+        let pos = this.position;
+        if (this.tokens[pos].type !== C.TokenType.IDENTIFIER) return false;
+        pos++;
+        while (pos < this.tokens.length) {
+            const t = this.tokens[pos];
+            if (t.type === C.TokenType.KEYWORD && (t.value === '之' || t.value === '的')) {
+                pos++;
+                if (pos < this.tokens.length &&
+                    (this.tokens[pos].type === C.TokenType.IDENTIFIER ||
+                     this.tokens[pos].type === C.TokenType.KEYWORD)) {
+                    pos++;
+                } else {
+                    return false;
+                }
+            } else if (t.type === C.TokenType.PUNCTUATION && t.value === '：') {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return false;
     }
 
     // ==================== 语句解析 ====================
@@ -813,7 +885,18 @@ class Parser {
         }
         if (token.type === C.TokenType.IDENTIFIER) {
             const id = this.advance();
-            return AST.createIdentifier(id.value);
+            let expr = AST.createIdentifier(id.value);
+            // 支持成员访问：敌人之生命（允许关键字作为属性名）
+            while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
+                const next = this.peek();
+                if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                    this.advance();
+                    expr = AST.createMemberExpression(expr, AST.createIdentifier(next.value), false);
+                } else {
+                    break;
+                }
+            }
+            return expr;
         }
         return this.parseExpression();
     }
@@ -880,32 +963,48 @@ class Parser {
         return AST.createClassDeclaration(name.value, body);
     }
 
-    // ==================== 定义解析（变量/函数/类） ====================
+    // ==================== 定义解析（变量/函数/类/成员赋值） ====================
 
     parseDefinition() {
         const id = this.advance();
+        let target = AST.createIdentifier(id.value);
+
+        // 处理成员访问链：敌人之生命
+        // 允许关键字作为属性名
+        while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
+            const next = this.peek();
+            if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                this.advance();
+                target = AST.createMemberExpression(target, AST.createIdentifier(next.value), false);
+            } else {
+                throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
+            }
+        }
+
         this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
 
-        // 函数定义：输入"参数"；
-        if (this.match(C.TokenType.KEYWORD, '输入')) {
+        // 函数定义（仅当左侧是简单标识符时支持）
+        if (target.type === C.NodeType.Identifier && this.match(C.TokenType.KEYWORD, '输入')) {
             const params = this.parseFunctionParams();
             this.expect(C.TokenType.PUNCTUATION, '；', '期望分号');
             const body = this.parseBlock(id.column);
             return AST.createFunctionDeclaration(id.value, params, body);
         }
 
-        // 类定义：嵌套的标识符：定义
-        const next = this.peek();
-        const nextNext = this.peekNext();
-        if (next.type === C.TokenType.IDENTIFIER && nextNext.value === '：') {
-            const body = this.parseClassBody(id.column);
-            return AST.createClassDeclaration(id.value, body);
+        // 类定义（仅当左侧是简单标识符时支持）
+        if (target.type === C.NodeType.Identifier) {
+            const next = this.peek();
+            const nextNext = this.peekNext();
+            if (next.type === C.TokenType.IDENTIFIER && nextNext.value === '：') {
+                const body = this.parseClassBody(id.column);
+                return AST.createClassDeclaration(id.value, body);
+            }
         }
 
-        // 变量赋值
+        // 变量赋值或成员赋值（用 ExpressionStatement 包装以生成分号）
         const value = this.parseExpression();
         this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
-        return AST.createAssignmentExpression(AST.createIdentifier(id.value), value);
+        return AST.createExpressionStatement(AST.createAssignmentExpression(target, value));
     }
 
     /**
@@ -988,10 +1087,11 @@ class Parser {
 
     /**
      * 判断当前令牌是否是代码块终止符
+     * 注意：'结束' 作为 break 语句使用，不作为块终止符
      */
     isBlockTerminator(token) {
         return token.type === C.TokenType.KEYWORD
-            && (token.value === '否则' || token.value === '结束' || token.value === '以上');
+            && (token.value === '否则' || token.value === '以上');
     }
 
     parseExpressionStatement() {
@@ -1122,9 +1222,15 @@ class Parser {
         let object = this.parsePrimary();
 
         // 之/的 成员访问
+        // 允许关键字作为属性名（如"追加"、"包含"等保留字）
         while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
-            const property = this.expect(C.TokenType.IDENTIFIER, null, '期望属性名');
-            object = AST.createMemberExpression(object, AST.createIdentifier(property.value), false);
+            const next = this.peek();
+            if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                this.advance();
+                object = AST.createMemberExpression(object, AST.createIdentifier(next.value), false);
+            } else {
+                throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
+            }
         }
 
         // 第...项 索引访问
@@ -1166,6 +1272,12 @@ class Parser {
 
 // ==================== 代码生成器（来源：codeGenerator.js） ====================
 
+/**
+ * 苦瓜脚本语言 — 代码生成器
+ * 将AST转换为JavaScript代码
+ * 使用 generate(node) 返回字符串的方式替代全局 output 拼接
+ */
+
 class CodeGenerator {
     generate(node) {
         return this.visit(node);
@@ -1185,15 +1297,94 @@ class CodeGenerator {
         throw new Error(`未知节点类型: ${node.type}`);
     }
 
+    /**
+     * 递归收集所有赋值左边的Identifier变量名（用于顶部统一var声明）
+     * 只收集 AssignmentExpression 中 left.type === Identifier 的名字
+     * 以及 VariableDeclaration（循环初始化）的名字
+     * 以及 FunctionDeclaration 的参数名、函数名、类属性名
+     */
+    _collectVars(node, names) {
+        if (!node) return;
+
+        switch (node.type) {
+            case C.NodeType.AssignmentExpression:
+                if (node.left.type === C.NodeType.Identifier) {
+                    names.add(node.left.name);
+                }
+                this._collectVars(node.right, names);
+                // 成员赋值的object部分可能嵌套标识符（不需要额外收集）
+                if (node.left.type === C.NodeType.MemberExpression) {
+                    this._collectVars(node.left, names);
+                }
+                break;
+            case C.NodeType.VariableDeclaration:
+                if (node.name) names.add(node.name);
+                if (node.value) this._collectVars(node.value, names);
+                break;
+            case C.NodeType.FunctionDeclaration:
+                if (node.name) names.add(node.name);
+                for (const p of node.params || []) {
+                    if (p.name) names.add(p.name);
+                }
+                this._collectVars(node.body, names);
+                break;
+            case C.NodeType.ClassDeclaration:
+                if (node.name) names.add(node.name);
+                this._collectVars(node.body, names);
+                break;
+            case C.NodeType.ClassProperty:
+                if (node.name) names.add(node.name);
+                if (node.value) this._collectVars(node.value, names);
+                break;
+            case C.NodeType.UpdateExpression:
+                // i++ 中的i
+                if (node.argument && node.argument.name) names.add(node.argument.name);
+                break;
+            default:
+                // 遍历所有对象属性
+                for (const key of Object.keys(node)) {
+                    const val = node[key];
+                    if (Array.isArray(val)) {
+                        for (const item of val) this._collectVars(item, names);
+                    } else if (val && typeof val === 'object' && val.type) {
+                        this._collectVars(val, names);
+                    }
+                }
+        }
+    }
+
     // ==================== 访问器注册表 ====================
     // 添加新节点类型的代码生成规则时，在此注册即可
 
     get visitors() {
         if (!this._visitors) {
             this._visitors = {
-                // 程序根节点
+                // 程序根节点 — 注入输入输出模块和工具函数（浏览器与Node兼容）
+                // 同时在顶部预声明所有全局标识符赋值的变量，避免函数内部赋值产生var遮蔽导致NaN
                 [C.NodeType.Program]: (node) => {
+                    // 1. 收集所有赋值左侧的Identifier变量名（不重复，跳过成员赋值）
+                    const varNames = new Set();
+                    this._collectVars(node, varNames);
+
                     let code = '(function(console) {\n';
+
+                    // 2. 顶部统一预声明所有用户变量
+                    if (varNames.size > 0) {
+                        code += '    var ' + [...varNames].join(', ') + ';\n';
+                    }
+
+                    code += '    // ===== 输入输出模块 =====\n';
+                    code += '    var 弹窗 = typeof alert !== "undefined" ? alert : function(msg) { console.log(msg); };\n';
+                    code += '    var 询问 = typeof prompt !== "undefined" ? prompt : function(msg) { console.log("[输入]" + msg); return "1"; };\n';
+                    code += '    var 确认 = typeof confirm !== "undefined" ? confirm : function(msg) { console.log("[确认]" + msg); return true; };\n';
+                    code += '    var 写入 = typeof document !== "undefined" ? function(msg) { document.write(msg); } : function(msg) { console.log(msg); };\n';
+                    code += '    // ===== 工具函数模块 =====\n';
+                    code += '    var 随机数字 = Math.random;\n';
+                    code += '    var 向下取整 = Math.floor;\n';
+                    code += '    var 向上取整 = Math.ceil;\n';
+                    code += '    var 绝对值 = Math.abs;\n';
+                    code += '    var 转整数 = parseInt;\n';
+                    code += '    var 转数字 = parseFloat;\n';
                     for (const stmt of node.body) {
                         code += '    ' + this.visit(stmt) + '\n';
                     }
@@ -1220,11 +1411,11 @@ class CodeGenerator {
                     return code;
                 },
 
-                // for 循环（重复）
+                // for 循环（重复）— 变量已在Program顶部预声明，这里直接赋值
                 [C.NodeType.ForStatement]: (node) => {
                     let init = '';
                     if (node.init) {
-                        init = `var ${node.init.name} = ${this.visit(node.init.value)}`;
+                        init = `${node.init.name} = ${this.visit(node.init.value)}`;
                     }
                     let cond = node.condition ? this.visit(node.condition) : '';
                     let update = '';
@@ -1237,7 +1428,7 @@ class CodeGenerator {
                 // 循环N次
                 [C.NodeType.ForOfStatement]: (node) => {
                     const varName = node.left.name;
-                    return `for (var ${varName} = 0; ${varName} < ${this.visit(node.right)}; ${varName}++) ${this.visit(node.body)}`;
+                    return `for (${varName} = 0; ${varName} < ${this.visit(node.right)}; ${varName}++) ${this.visit(node.body)}`;
                 },
 
                 // 返回语句
@@ -1264,7 +1455,7 @@ class CodeGenerator {
                     return `var ${node.name} = ${this.visit(node.value)};`;
                 },
 
-                // 类声明
+                // 类声明 — 名字已在Program顶部预声明，这里直接赋值
                 [C.NodeType.ClassDeclaration]: (node) => {
                     const body = node.body.body || node.body;
                     const members = body.map(stmt => {
@@ -1279,7 +1470,7 @@ class CodeGenerator {
                         return null;
                     }).filter(m => m !== null);
 
-                    return `var ${node.name} = {\n    ${members.join(',\n    ')}\n};`;
+                    return `${node.name} = {\n    ${members.join(',\n    ')}\n};`;
                 },
 
                 // 表达式语句
@@ -1287,9 +1478,10 @@ class CodeGenerator {
                     return `${this.visit(node.expression)};`;
                 },
 
-                // 赋值表达式
+                // 赋值表达式 — 统一使用 "左边 = 值" 形式（不再加var）
+                // 所有用户变量名在Program顶部统一预声明（避免函数内赋值产生var遮蔽）
                 [C.NodeType.AssignmentExpression]: (node) => {
-                    return `var ${this.visit(node.left)} = ${this.visit(node.right)}`;
+                    return `${this.visit(node.left)} = ${this.visit(node.right)}`;
                 },
 
                 // 逻辑表达式
@@ -1360,9 +1552,6 @@ class Compiler {
         this.codeGenerator = new CodeGenerator();
     }
 
-    /**
-     * 编译源代码为JavaScript代码
-     */
     compile(source) {
         this.lexer = new Lexer(source);
         const tokens = this.lexer.tokenize();
@@ -1374,10 +1563,6 @@ class Compiler {
         return jsCode;
     }
 
-    /**
-     * 运行源代码，返回输出
-     * 可选 outputCallback 用于流式接收每条日志（浏览器编辑器场景）
-     */
     run(source, outputCallback) {
         const jsCode = this.compile(source);
 
@@ -1397,10 +1582,9 @@ class Compiler {
     }
 }
 
-// ==================== 浏览器全局导出 ====================
-if (typeof window !== 'undefined') {
-    window.KuguaCompiler = Compiler;
-    window.KuguaLexer = Lexer;
-    window.KuguaParser = Parser;
-    window.KuguaCodeGenerator = CodeGenerator;
-}
+// ==================== 全局导出 ====================
+global.KuguaCompiler = Compiler;
+global.KuguaLexer = Lexer;
+global.KuguaParser = Parser;
+global.KuguaCodeGenerator = CodeGenerator;
+})(typeof window !== "undefined" ? window : globalThis);

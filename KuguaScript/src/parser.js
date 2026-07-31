@@ -97,15 +97,42 @@ class Parser {
             return this[this.statementHandlers[token.value]]();
         }
 
-        // 变量定义：标识符后跟冒号
-        if (token.type === C.TokenType.IDENTIFIER) {
-            const next = this.peekNext();
-            if (next && next.value === '：') {
-                return this.parseDefinition();
-            }
+        // 变量/成员赋值定义：标识符（之属性）后跟冒号
+        if (token.type === C.TokenType.IDENTIFIER && this.isDefinitionStart()) {
+            return this.parseDefinition();
         }
 
         return this.parseExpressionStatement();
+    }
+
+    /**
+     * 向前探测是否为定义语句
+     * 匹配模式：标识符（之/的 属性名）* ：
+     * 属性名可以是标识符或关键字
+     * 不消耗令牌，只读取判断
+     */
+    isDefinitionStart() {
+        let pos = this.position;
+        if (this.tokens[pos].type !== C.TokenType.IDENTIFIER) return false;
+        pos++;
+        while (pos < this.tokens.length) {
+            const t = this.tokens[pos];
+            if (t.type === C.TokenType.KEYWORD && (t.value === '之' || t.value === '的')) {
+                pos++;
+                if (pos < this.tokens.length &&
+                    (this.tokens[pos].type === C.TokenType.IDENTIFIER ||
+                     this.tokens[pos].type === C.TokenType.KEYWORD)) {
+                    pos++;
+                } else {
+                    return false;
+                }
+            } else if (t.type === C.TokenType.PUNCTUATION && t.value === '：') {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        return false;
     }
 
     // ==================== 语句解析 ====================
@@ -204,7 +231,18 @@ class Parser {
         }
         if (token.type === C.TokenType.IDENTIFIER) {
             const id = this.advance();
-            return AST.createIdentifier(id.value);
+            let expr = AST.createIdentifier(id.value);
+            // 支持成员访问：敌人之生命（允许关键字作为属性名）
+            while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
+                const next = this.peek();
+                if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                    this.advance();
+                    expr = AST.createMemberExpression(expr, AST.createIdentifier(next.value), false);
+                } else {
+                    break;
+                }
+            }
+            return expr;
         }
         return this.parseExpression();
     }
@@ -271,32 +309,48 @@ class Parser {
         return AST.createClassDeclaration(name.value, body);
     }
 
-    // ==================== 定义解析（变量/函数/类） ====================
+    // ==================== 定义解析（变量/函数/类/成员赋值） ====================
 
     parseDefinition() {
         const id = this.advance();
+        let target = AST.createIdentifier(id.value);
+
+        // 处理成员访问链：敌人之生命
+        // 允许关键字作为属性名
+        while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
+            const next = this.peek();
+            if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                this.advance();
+                target = AST.createMemberExpression(target, AST.createIdentifier(next.value), false);
+            } else {
+                throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
+            }
+        }
+
         this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
 
-        // 函数定义：输入"参数"；
-        if (this.match(C.TokenType.KEYWORD, '输入')) {
+        // 函数定义（仅当左侧是简单标识符时支持）
+        if (target.type === C.NodeType.Identifier && this.match(C.TokenType.KEYWORD, '输入')) {
             const params = this.parseFunctionParams();
             this.expect(C.TokenType.PUNCTUATION, '；', '期望分号');
             const body = this.parseBlock(id.column);
             return AST.createFunctionDeclaration(id.value, params, body);
         }
 
-        // 类定义：嵌套的标识符：定义
-        const next = this.peek();
-        const nextNext = this.peekNext();
-        if (next.type === C.TokenType.IDENTIFIER && nextNext.value === '：') {
-            const body = this.parseClassBody(id.column);
-            return AST.createClassDeclaration(id.value, body);
+        // 类定义（仅当左侧是简单标识符时支持）
+        if (target.type === C.NodeType.Identifier) {
+            const next = this.peek();
+            const nextNext = this.peekNext();
+            if (next.type === C.TokenType.IDENTIFIER && nextNext.value === '：') {
+                const body = this.parseClassBody(id.column);
+                return AST.createClassDeclaration(id.value, body);
+            }
         }
 
-        // 变量赋值
+        // 变量赋值或成员赋值（用 ExpressionStatement 包装以生成分号）
         const value = this.parseExpression();
         this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
-        return AST.createAssignmentExpression(AST.createIdentifier(id.value), value);
+        return AST.createExpressionStatement(AST.createAssignmentExpression(target, value));
     }
 
     /**
@@ -379,10 +433,11 @@ class Parser {
 
     /**
      * 判断当前令牌是否是代码块终止符
+     * 注意：'结束' 作为 break 语句使用，不作为块终止符
      */
     isBlockTerminator(token) {
         return token.type === C.TokenType.KEYWORD
-            && (token.value === '否则' || token.value === '结束' || token.value === '以上');
+            && (token.value === '否则' || token.value === '以上');
     }
 
     parseExpressionStatement() {
@@ -513,9 +568,15 @@ class Parser {
         let object = this.parsePrimary();
 
         // 之/的 成员访问
+        // 允许关键字作为属性名（如"追加"、"包含"等保留字）
         while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
-            const property = this.expect(C.TokenType.IDENTIFIER, null, '期望属性名');
-            object = AST.createMemberExpression(object, AST.createIdentifier(property.value), false);
+            const next = this.peek();
+            if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                this.advance();
+                object = AST.createMemberExpression(object, AST.createIdentifier(next.value), false);
+            } else {
+                throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
+            }
         }
 
         // 第...项 索引访问

@@ -5,7 +5,7 @@ const url = require('url');
 const Compiler = require('./src/compiler');
 
 const compiler = new Compiler();
-const PORT = 3000;
+const PORT = process.env.PORT || 3002;
 
 function getContentType(ext) {
     const types = {

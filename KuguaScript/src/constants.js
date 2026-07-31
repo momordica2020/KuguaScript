@@ -93,6 +93,16 @@ const LogicalAndKeywords = ['并且'];      // &&
 const LogicalOrKeywords = ['或者'];        // ||
 const LogicalNotKeywords = ['非'];         // !
 
+// 运算符类关键字（比较、相等、逻辑）— 始终完整识别为关键字，不作为标识符的一部分
+// 这样 "i小于3" 会正确拆分为 "i" + "小于" + "3"，"a是b" 会拆分为 "a" + "是" + "b"
+const OperatorKeywords = [
+    ...Object.keys(ComparisonOperators),
+    ...Object.keys(EqualityOperators),
+    ...LogicalAndKeywords,
+    ...LogicalOrKeywords,
+    ...LogicalNotKeywords
+];
+
 // 布尔值关键字 → JS布尔值
 const BooleanKeywords = {
     '正确': true, '正确的': true, '真': true, '真的': true, '对': true, '对的': true,
@@ -120,6 +130,17 @@ const AllKeywords = [
     ...LogicalOrKeywords,
     ...LogicalNotKeywords,
     // 保留关键字（尚未实现但已预留）
+    '定义', '个', '长度', '功能', '方法', '全新', '就', '一直', '执行',
+    '增加', '追加', '去除', '包含', '为', '则', '和', '与', '或', '用', '以',
+    '可', '使', '让', '被', '把', '将', '给', '向', '从', '在', '上', '下',
+    '左', '右', '前', '后', '中', '内', '外', '间', '时', '的话', '而已',
+    '而已矣', '罢了', '罢了罢了'
+];
+
+// 保留关键字（未实际在语法中使用，仅预留）
+// 词法分析器在识别这些关键字时会检查后继字符，
+// 若后跟标识符字符则不识别为关键字，避免阻断标识符识别
+const ReservedKeywords = [
     '定义', '个', '长度', '功能', '方法', '全新', '就', '一直', '执行',
     '增加', '追加', '去除', '包含', '为', '则', '和', '与', '或', '用', '以',
     '可', '使', '让', '被', '把', '将', '给', '向', '从', '在', '上', '下',
@@ -166,11 +187,13 @@ module.exports = {
     LogicalAndKeywords,
     LogicalOrKeywords,
     LogicalNotKeywords,
+    OperatorKeywords,
     BooleanKeywords,
     NullKeywords,
     IfAliases,
     ReturnAliases,
     AllKeywords,
+    ReservedKeywords,
     Operators,
     Punctuations,
     LeftParen,

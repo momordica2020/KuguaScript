@@ -250,6 +250,13 @@ class Lexer {
 
         for (const keyword of C.AllKeywords) {
             if (this.source.startsWith(keyword, this.position)) {
+                // 保留关键字（未实际使用）在后面紧跟标识符字符时不识别为关键字
+                // 这样 "追加子节点" 不会被拆成 "追加" + "子节点"
+                // 真正使用的关键字（在 ReservedKeywords 之外的）始终识别
+                if (C.ReservedKeywords.includes(keyword)) {
+                    const nextChar = this.source[this.position + keyword.length];
+                    if (nextChar && C.isIdentifierPart(nextChar)) continue;
+                }
                 if (keyword.length > matchedLength) {
                     matchedKeyword = keyword;
                     matchedLength = keyword.length;
@@ -271,12 +278,41 @@ class Lexer {
         const startColumn = this.column;
 
         while (this.position < this.source.length && C.isIdentifierPart(this.peek())) {
-            // 遇到关键字前缀时停止
+            // 成员访问操作符"之"/"的"始终停止标识符读取
+            if (this.source.startsWith('之', this.position) || this.source.startsWith('的', this.position)) {
+                break;
+            }
+            // 遇到完整关键字前缀时停止
+            // 但如果已读取了字符且关键字后跟标识符字符，则视为标识符一部分继续读取
+            // 例如 "点击次数" 中 "次" 是关键字，但 "点击次" 后还有 "数"，应继续读取
             let hasKeywordPrefix = false;
             for (const keyword of C.AllKeywords) {
+                if (keyword === '之' || keyword === '的') continue;
                 if (this.source.startsWith(keyword, this.position)) {
-                    hasKeywordPrefix = true;
-                    break;
+                    let isComplete = true;
+                    if (C.ReservedKeywords.includes(keyword)) {
+                        const nextChar = this.source[this.position + keyword.length];
+                        if (nextChar && C.isIdentifierPart(nextChar)) {
+                            isComplete = false;
+                        }
+                    } else if (value.length > 0) {
+                        // 已读取字符时，检查关键字后是否还有标识符字符
+                        // 但运算符类关键字（比较、相等、逻辑）始终视为完整关键字
+                        // 这样 "i小于3" 会正确拆分为 "i" + "小于" + "3"
+                        // 而 "点击次数" 中 "次" 不是运算符，后跟 "数" 时仍视为标识符一部分
+                        if (C.OperatorKeywords.includes(keyword)) {
+                            // 运算符类关键字始终完整识别，保持 isComplete = true
+                        } else {
+                            const nextChar = this.source[this.position + keyword.length];
+                            if (nextChar && C.isIdentifierPart(nextChar)) {
+                                isComplete = false;
+                            }
+                        }
+                    }
+                    if (isComplete) {
+                        hasKeywordPrefix = true;
+                        break;
+                    }
                 }
             }
             if (hasKeywordPrefix) break;
