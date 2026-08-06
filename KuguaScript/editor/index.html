@@ -1,762 +1,1518 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>苦瓜脚本语言编辑器</title>
-    <style>
-        /* ========== 昼夜主题变量 ========== */
-        :root {
-            --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            --panel-bg: rgba(255, 255, 255, 0.05);
-            --panel-border: rgba(255, 255, 255, 0.1);
-            --text-primary: #ffffff;
-            --text-secondary: #aaa;
-            --highlight-bg: rgba(0, 0, 0, 0.35);
-            --status-bg: rgba(0, 0, 0, 0.35);
-            --output-bg: rgba(0, 0, 0, 0.35);
-            --color-keyword: #c678dd;
-            --color-string: #98c379;
-            --color-number: #d19a66;
-            --color-boolean: #e5c07b;
-            --color-null: #6a9955;
-            --color-comment: #5c6370;
-            --color-punctuation: #56b6c2;
-            --color-identifier: #e06c75;
-            --color-log: #00ff88;
-            --color-error: #ff4444;
-            --selector-bg: rgba(255, 255, 255, 0.1);
-            --selector-option-bg: #1a1a2e;
-            --sandbox-bg: #ffffff;
-        }
-        body.light-mode {
-            --bg-primary: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
-            --panel-bg: rgba(255, 255, 255, 0.85);
-            --panel-border: rgba(0, 0, 0, 0.08);
-            --text-primary: #1a1a2e;
-            --text-secondary: #555;
-            --highlight-bg: rgba(255, 255, 255, 0.7);
-            --status-bg: rgba(0, 0, 0, 0.05);
-            --output-bg: rgba(250, 250, 250, 0.9);
-            --color-keyword: #a626a4;
-            --color-string: #50a14f;
-            --color-number: #986801;
-            --color-boolean: #c18401;
-            --color-null: #50a14f;
-            --color-comment: #a0a1a7;
-            --color-punctuation: #0184bc;
-            --color-identifier: #e45649;
-            --color-log: #22863a;
-            --color-error: #cb2431;
-            --selector-bg: rgba(0, 0, 0, 0.06);
-            --selector-option-bg: #ffffff;
-            --sandbox-bg: #ffffff;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苦瓜脚本 - VSCode 风格编辑器</title>
+<style>
+/* ================= 主题变量 ================= */
+:root {
+    --bg: #1e1e1e;
+    --bg-alt: #252526;
+    --bg-hover: #2a2d2e;
+    --bg-active: #37373d;
+    --border: #3c3c3c;
+    --border-light: #454545;
+    --text: #cccccc;
+    --text-bright: #ffffff;
+    --text-dim: #8a8a8a;
+    --accent: #007acc;
+    --accent-hover: #1a8ad4;
+    --menu-bg: #252526;
+    --menu-hover: #04395e;
+    --term-bg: #1e1e1e;
+    --term-text: #cccccc;
+    --term-green: #89d185;
+    --term-red: #f48771;
+    --term-yellow: #d7ba7d;
+    --term-cyan: #4ec9b0;
+    --input-bg: #3c3c3c;
+    --shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+body.light-mode {
+    --bg: #ffffff;
+    --bg-alt: #f3f3f3;
+    --bg-hover: #e8e8e8;
+    --bg-active: #e4e6f1;
+    --border: #e0e0e0;
+    --border-light: #d0d0d0;
+    --text: #333333;
+    --text-bright: #111111;
+    --text-dim: #8a8a8a;
+    --accent: #007acc;
+    --accent-hover: #1a8ad4;
+    --menu-bg: #ffffff;
+    --menu-hover: #e8e8e8;
+    --term-bg: #1e1e1e;
+    --term-text: #cccccc;
+    --term-green: #89d185;
+    --term-red: #f48771;
+    --term-yellow: #d7ba7d;
+    --term-cyan: #4ec9b0;
+    --input-bg: #ffffff;
+    --shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+}
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
 
-        body {
-            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
-            background: var(--bg-primary);
-            min-height: 100vh;
-            padding: 12px;
-            transition: background 0.3s ease;
-        }
+/* ================= 顶部菜单栏 ================= */
+.menubar {
+    display: flex;
+    align-items: center;
+    height: 31px;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    padding: 0 6px;
+    gap: 2px;
+}
+.menu-item {
+    position: relative;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text);
+    background: transparent;
+    border: none;
+}
+.menu-item:hover { background: var(--bg-hover); }
+#appTitle { margin-left: 6px; font-weight: 600; color: var(--text-bright); font-size: 13px; }
+.menu-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 200px;
+    background: var(--menu-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 4px;
+    z-index: 1000;
+    display: none;
+}
+.menu-dropdown.open { display: block; }
+.menu-dropdown .mi {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    padding: 6px 10px;
+    border-radius: 3px;
+    color: var(--text);
+    font-size: 13px;
+    background: transparent;
+    border: none;
+    width: 100%;
+    text-align: left;
+}
+.menu-dropdown .mi:hover { background: var(--menu-hover); color: #fff; }
+.menu-dropdown .mi .kbd {
+    color: var(--text-dim);
+    font-size: 11px;
+    margin-left: 16px;
+}
+.menu-dropdown .sep { height: 1px; background: var(--border); margin: 4px 0; }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
+/* ================= 主区域 ================= */
+.main { display: flex; flex: 1; min-height: 0; }
 
-        h1 {
-            text-align: center;
-            color: var(--text-primary);
-            margin-bottom: 12px;
-            font-size: 1.8em;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2);
-        }
+/* 活动栏 */
+.activitybar {
+    width: 48px;
+    background: var(--bg-alt);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 6px;
+    gap: 2px;
+    flex-shrink: 0;
+}
+.activitybar .ab {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 18px;
+    border-left: 2px solid transparent;
+    position: relative;
+}
+.activitybar .ab:hover { color: var(--text-bright); }
+.activitybar .ab.active { color: var(--text-bright); border-left: 2px solid var(--text-bright); }
 
-        .editor-wrapper {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
+/* 侧边栏 */
+.sidebar {
+    width: 260px;
+    background: var(--bg-alt);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-width: 0;
+}
+.sidebar.hidden { display: none; }
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+}
+.sidebar-actions { display: flex; gap: 4px; }
+.sidebar-actions button {
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 14px; padding: 2px 5px; border-radius: 4px;
+}
+.sidebar-actions button:hover { background: var(--bg-hover); color: var(--text-bright); }
 
-        .panel {
-            flex: 1;
-            background: var(--panel-bg);
-            border-radius: 10px;
-            padding: 10px;
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--panel-border);
-        }
+/* 文件树 */
+.tree { flex: 1; overflow-y: auto; padding: 4px 0; user-select: none; }
+.tree::-webkit-scrollbar, .term-scroll::-webkit-scrollbar { width: 10px; }
+.tree::-webkit-scrollbar-thumb { background: #424242; border-radius: 5px; }
+.tree-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 13px;
+}
+.tree-item:hover { background: var(--bg-hover); }
+.tree-item.active { background: var(--bg-active); }
+.tree-item .icon { width: 16px; text-align: center; color: var(--text-dim); font-size: 13px; flex-shrink: 0; }
+.tree-item .bracket { color: var(--text-dim); font-size: 12px; }
+.tree-item:hover .bracket { color: var(--text-bright); }
+.tree-item .fname { overflow: hidden; text-overflow: ellipsis; }
+.tree-item.isdir { font-weight: 600; }
+.tree-empty { padding: 16px; color: var(--text-dim); text-align: center; }
 
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--panel-border);
-        }
+/* ================= 中间编辑区 ================= */
+.editor-center { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+.tabs {
+    display: flex;
+    align-items: stretch;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+    height: 34px;
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+.tabs::-webkit-scrollbar { height: 2px; }
+.tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    cursor: pointer;
+    border-right: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    white-space: nowrap;
+    background: var(--bg-alt);
+    max-width: 180px;
+    flex-shrink: 0;
+}
+.tab.active { background: var(--bg); color: var(--text-bright); }
+.tab .dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; flex-shrink: 0; }
+.tab.dirty .dot { background: var(--text-dim); }
+.tab .tname { overflow: hidden; text-overflow: ellipsis; }
+.tab .tclose { border: none; background: transparent; color: var(--text-dim); font-size: 14px; padding: 0 2px; border-radius: 3px; }
+.tab .tclose:hover { background: var(--bg-active); color: var(--text-bright); }
+.tab-add {
+    border: none; background: transparent; color: var(--text-dim);
+    font-size: 16px; padding: 0 10px; cursor: pointer; flex-shrink: 0;
+}
+.tab-add:hover { color: var(--text-bright); }
 
-        .panel-title {
-            color: var(--text-primary);
-            font-size: 1.05em;
-            font-weight: bold;
-        }
+.editor-host { flex: 1; min-height: 0; position: relative; }
 
-        .panel-actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
+/* ================= 右侧预览栏 ================= */
+.preview-panel {
+    width: 380px;
+    background: var(--bg-alt);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-width: 200px;
+    max-width: 70%;
+    position: relative;
+}
+.preview-panel.hidden { display: none; }
+.preview-resizer {
+    position: absolute;
+    left: -3px; top: 0; bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 5;
+}
+.preview-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 12px; font-size: 11px; letter-spacing: 0.5px;
+    text-transform: uppercase; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.preview-header button { background: transparent; border: none; color: var(--text-dim); font-size: 13px; padding: 2px 5px; border-radius: 4px; }
+.preview-header button:hover { background: var(--bg-hover); color: var(--text-bright); }
+.preview-frame { flex: 1; min-height: 0; border: none; background: #fff; }
 
-        button {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-            transition: all 0.25s ease;
-        }
+/* ================= 底部面板（Terminal 风格） ================= */
+.bottom-panel {
+    background: var(--term-bg);
+    border-top: 1px solid var(--border);
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    position: relative;
+}
+.bottom-panel.hidden { display: none; }
+.bottom-resizer {
+    position: absolute;
+    top: -3px; left: 0; right: 0;
+    height: 6px;
+    cursor: row-resize;
+    z-index: 5;
+}
+.bottom-tabs {
+    display: flex; align-items: center;
+    background: var(--bg-alt);
+    border-bottom: 1px solid var(--border);
+    height: 34px; flex-shrink: 0; padding: 0 6px; gap: 2px;
+}
+.bottom-tabs .btab {
+    border: none; background: transparent; color: var(--text-dim);
+    padding: 5px 12px; font-size: 12px; border-radius: 4px;
+    display: flex; align-items: center; gap: 6px;
+}
+.bottom-tabs .btab.active { background: var(--bg-active); color: var(--text-bright); }
+.bottom-tabs .btab:hover { background: var(--bg-hover); }
+.bottom-tabs .spacer { flex: 1; }
+.bottom-tabs .tools button {
+    background: transparent; border: none; color: var(--text-dim);
+    font-size: 13px; padding: 3px 6px; border-radius: 4px;
+}
+.bottom-tabs .tools button:hover { background: var(--bg-hover); color: var(--text-bright); }
 
-        .btn-compile {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-        }
-        .btn-compile:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(102, 126, 234, 0.35); }
+.term-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 12px; font-family: "Consolas", "Courier New", monospace; font-size: 12.5px; line-height: 1.5; user-select: text; -webkit-user-select: text; }
+.term-body::-webkit-scrollbar { width: 10px; }
+.term-body::-webkit-scrollbar-thumb { background: #424242; border-radius: 5px; }
+.term-line { white-space: pre-wrap; word-break: break-all; color: var(--term-text); }
+.term-line .ts { color: #6a6a6a; font-size: 11px; margin-right: 8px; }
+.term-line.log { color: var(--term-text); }
+.term-line.success { color: var(--term-green); }
+.term-line.error { color: var(--term-red); }
+.term-line.warn { color: var(--term-yellow); }
+.term-line.info { color: var(--term-cyan); }
+.term-line.cmd { color: var(--term-cyan); font-weight: 600; }
+.term-cursor { display: inline-block; width: 8px; height: 14px; background: var(--term-text); vertical-align: text-bottom; animation: blink 1s infinite; }
+@keyframes blink { 0%,49% {opacity:1;} 50%,100% {opacity:0;} }
 
-        .btn-run {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: #fff;
-        }
-        .btn-run:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(17, 153, 142, 0.35); }
+/* ================= 状态栏 ================= */
+.statusbar {
+    display: flex;
+    align-items: center;
+    height: 23px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12px;
+    flex-shrink: 0;
+    padding: 0 8px;
+    gap: 14px;
+    overflow: hidden;
+}
+.statusbar .sb {
+    display: flex; align-items: center; gap: 4px;
+    padding: 0 4px; height: 100%; cursor: pointer;
+}
+.statusbar .sb:hover { background: rgba(255,255,255,0.15); }
+.statusbar .spacer { flex: 1; }
+.statusbar .sb-zoom-wrap { display: flex; align-items: center; gap: 6px; padding: 0 4px; }
+.statusbar input[type="range"].sb-zoom { width: 90px; height: 4px; accent-color: #fff; cursor: pointer; }
+.statusbar .sb-zoom-num { min-width: 38px; text-align: center; }
 
-        .btn-clear {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: #fff;
-        }
-        .btn-clear:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(240, 147, 251, 0.35); }
+/* ================= 帮助弹窗 ================= */
+.overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 2000; display: none; align-items: center; justify-content: center;
+}
+.overlay.open { display: flex; }
+.helpbox {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: min(720px, 90vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+.helpbox-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+}
+.helpbox-header h2 { font-size: 15px; color: var(--text-bright); font-weight: 600; }
+.helpbox-header button { background: transparent; border: none; color: var(--text-dim); font-size: 18px; padding: 2px 6px; border-radius: 4px; }
+.helpbox-header button:hover { background: var(--bg-hover); color: var(--text-bright); }
+.helpbox-body { padding: 16px; overflow-y: auto; user-select: text; }
+.helpbox-body h3 { color: var(--text-bright); font-size: 14px; margin: 14px 0 8px; }
+.helpbox-body h3:first-child { margin-top: 0; }
+.helpbox-body p, .helpbox-body li { color: var(--text); line-height: 1.7; margin-bottom: 4px; }
+.helpbox-body code {
+    background: var(--bg-hover); color: var(--term-cyan);
+    padding: 1px 5px; border-radius: 3px; font-family: "Consolas", monospace; font-size: 12px;
+}
+.helpbox-body pre {
+    background: var(--bg); color: var(--term-text);
+    padding: 10px; border-radius: 4px; overflow-x: auto;
+    font-family: "Consolas", monospace; font-size: 12px; line-height: 1.6; margin: 6px 0;
+}
+.helpbox-body ul { padding-left: 20px; }
 
-        .btn-syntax {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: #fff;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        }
-        .btn-syntax:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(250, 112, 154, 0.35); }
-
-        .btn-theme {
-            background: linear-gradient(135deg, #434343 0%, #000000 100%);
-            color: #fff;
-        }
-        body.light-mode .btn-theme {
-            background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
-        }
-        .btn-theme:hover { transform: translateY(-1px); }
-
-        .file-selector {
-            padding: 6px 10px;
-            border: none;
-            border-radius: 6px;
-            background: var(--selector-bg);
-            color: var(--text-primary);
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.25s ease;
-        }
-        .file-selector:hover { background: rgba(102, 126, 234, 0.2); }
-        .file-selector:focus { outline: none; border: 1px solid rgba(102, 126, 234, 0.5); }
-        .file-selector option { background: var(--selector-option-bg); color: var(--text-primary); }
-
-        textarea {
-            width: 100%;
-            height: 340px;
-            background: transparent;
-            border: none;
-            border-radius: 8px;
-            padding: 12px;
-            color: transparent;
-            caret-color: var(--text-primary);
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.55;
-            resize: none;
-            outline: none;
-            position: relative;
-            z-index: 1;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        textarea::-webkit-scrollbar { display: none; }
-        textarea:focus { border: 1px solid rgba(102, 126, 234, 0.4); }
-
-        .code-wrap {
-            position: relative;
-            height: 340px;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .output-panel, .sandbox-panel {
-            background: var(--panel-bg);
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 12px;
-            backdrop-filter: blur(8px);
-            border: 1px solid var(--panel-border);
-        }
-
-        .output-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--panel-border);
-        }
-
-        .output-title {
-            color: var(--text-primary);
-            font-size: 1.05em;
-            font-weight: bold;
-        }
-
-        .output-content {
-            background: var(--output-bg);
-            border-radius: 8px;
-            padding: 10px 12px;
-            min-height: 120px;
-            max-height: 260px;
-            overflow-y: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.6;
-            color: var(--color-log);
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        .output-content.error { color: var(--color-error); }
-        .output-line { display: block; margin-bottom: 2px; }
-        .output-ts { color: var(--text-secondary); font-size: 11px; margin-right: 8px; }
-
-        .syntax-highlight {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            padding: 12px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 13px;
-            line-height: 1.55;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            pointer-events: none;
-            overflow: auto;
-            background: var(--highlight-bg);
-            border-radius: 8px;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            /* 默认文字颜色 — 修复暗底黑字看不清问题 */
-            color: var(--text-primary);
-        }
-        .syntax-highlight::-webkit-scrollbar { display: none; }
-
-        .keyword { color: var(--color-keyword); font-weight: bold; }
-        .string { color: var(--color-string); }
-        .number { color: var(--color-number); }
-        .boolean { color: var(--color-boolean); }
-        .null { color: var(--color-null); }
-        .comment { color: var(--color-comment); font-style: italic; }
-        .punctuation { color: var(--color-punctuation); }
-        .identifier { color: var(--color-identifier); }
-
-        .status-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            padding: 6px 12px;
-            background: var(--status-bg);
-            border-radius: 8px;
-            color: var(--text-secondary);
-            font-size: 12px;
-        }
-        .status-item { display: flex; align-items: center; gap: 5px; }
-        .status-item span { font-weight: bold; color: var(--text-primary); }
-
-        .sandbox-frame {
-            width: 100%;
-            height: 320px;
-            background: var(--sandbox-bg);
-            border-radius: 8px;
-            border: 1px solid var(--panel-border);
-        }
-    </style>
+/* 提示条 */
+.toast {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    background: var(--bg-active); color: var(--text-bright);
+    padding: 8px 16px; border-radius: 4px; box-shadow: var(--shadow);
+    font-size: 13px; z-index: 3000; opacity: 0; transition: opacity 0.2s;
+    pointer-events: none;
+}
+.toast.show { opacity: 1; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>苦瓜脚本语言编辑器</h1>
 
-        <div class="editor-wrapper">
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">源代码</div>
-                    <div class="panel-actions">
-                        <select id="fileSelector" onchange="loadFile()" class="file-selector">
-                            <option value="">选择文件...</option>
-                        </select>
-                        <button class="btn-compile" onclick="compileCode()">编译</button>
-                        <button class="btn-run" onclick="runCode()">运行</button>
-                        <button class="btn-clear" onclick="clearAll()">清空</button>
-                        <a href="syntax.html" class="btn-syntax">语法规则</a>
-                        <button class="btn-theme" onclick="toggleTheme()" title="切换昼夜模式">☾</button>
-                    </div>
-                </div>
-                <div class="code-wrap">
-                    <div class="syntax-highlight" id="highlight"></div>
-                    <textarea id="source" oninput="updateHighlight()" placeholder="在此输入苦瓜脚本代码..."></textarea>
-                </div>
-                <div class="status-bar">
-                    <div class="status-item">行数: <span id="lineCount">1</span></div>
-                    <div class="status-item">列数: <span id="columnCount">1</span></div>
-                </div>
-            </div>
+<!-- 顶部菜单栏 -->
+<div class="menubar">
+    <span id="appTitle">苦瓜脚本</span>
+    <div class="menu-item" data-menu="file">文件</div>
+    <div class="menu-item" data-menu="run">运行</div>
+    <div class="menu-item" data-menu="view">查看</div>
+    <div class="menu-item" data-menu="help">帮助</div>
+</div>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title">编译结果</div>
-                </div>
-                <textarea id="compiled" readonly placeholder="编译后的JavaScript代码将显示在这里..." style="color: var(--text-primary);"></textarea>
-            </div>
-        </div>
-
-        <!-- 沙箱视图（在运行输出之上，便于点击按钮时同步看到输出） -->
-        <div class="sandbox-panel">
-            <div class="output-header">
-                <div class="output-title">沙箱视图（脚本操作的页面）</div>
-                <button class="btn-clear" onclick="resetSandbox()">重置沙箱</button>
-            </div>
-            <iframe id="sandbox" class="sandbox-frame" sandbox="allow-scripts allow-same-origin"></iframe>
-        </div>
-
-        <!-- 运行输出（在沙箱之下，便于顺序观察） -->
-        <div class="output-panel">
-            <div class="output-header">
-                <div class="output-title">运行输出</div>
-                <button class="btn-clear" onclick="clearOutput()">清空输出</button>
-            </div>
-            <div class="output-content" id="output">等待运行...</div>
-        </div>
+<!-- 主区域 -->
+<div class="main">
+    <!-- 活动栏 -->
+    <div class="activitybar" id="activitybar">
+        <button class="ab active" data-view="explorer" title="资源管理器 (Ctrl+Shift+E)">📁</button>
+        <button class="ab" data-view="preview" title="预览 (Ctrl+Shift+P)">▶</button>
+        <button class="ab" data-view="help" title="语法帮助 (F1)">❓</button>
     </div>
 
-    <script src="kugua-compiler.js"></script>
-    <script>
-        const compiler = new KuguaCompiler();
+    <!-- 侧边栏（文件树） -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <span id="sidebarTitle">资源管理器</span>
+            <div class="sidebar-actions">
+                <button id="btnRefresh" title="刷新文件树">⟳</button>
+                <button id="btnNewFile" title="新建文件">＋</button>
+            </div>
+        </div>
+        <div class="tree" id="tree"><div class="tree-empty">加载文件树中...</div></div>
+    </div>
 
-        // ===== 昼夜主题切换 =====
-        function toggleTheme() {
-            document.body.classList.toggle('light-mode');
-            const isLight = document.body.classList.contains('light-mode');
-            const btn = document.querySelector('.btn-theme');
-            btn.textContent = isLight ? '☀' : '☾';
-            btn.title = isLight ? '切换为夜间模式' : '切换为日间模式';
-            try { localStorage.setItem('ks-theme', isLight ? 'light' : 'dark'); } catch(e) {}
-        }
-        // 加载保存的主题
+    <!-- 中间编辑区 -->
+    <div class="editor-center">
+        <div class="tabs" id="tabs"></div>
+        <div class="editor-host" id="editorHost"></div>
+    </div>
+
+    <!-- 右侧预览栏 -->
+    <div class="preview-panel hidden" id="previewPanel">
+        <div class="preview-resizer" id="previewResizer"></div>
+        <div class="preview-header">
+            <span>沙箱预览</span>
+            <button id="btnRefreshPreview" title="重置沙箱">⟳</button>
+        </div>
+        <iframe id="preview" class="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+</div>
+
+<!-- 底部面板（Terminal 风格） -->
+<div class="bottom-panel" id="bottomPanel">
+    <div class="bottom-resizer" id="bottomResizer"></div>
+    <div class="bottom-tabs">
+        <button class="btab active" data-term="output">▣ 输出</button>
+        <div class="spacer"></div>
+        <div class="tools">
+            <button id="btnClearTerm" title="清空输出">🗑</button>
+            <button id="btnToggleTerm" title="面板开关 (Ctrl+J)">∨</button>
+        </div>
+    </div>
+    <div class="term-body" id="termBody"></div>
+</div>
+
+<!-- 状态栏 -->
+<div class="statusbar">
+    <div class="sb" id="sbBranch" title="分支">⎇ main</div>
+    <div class="spacer"></div>
+    <div class="sb" id="sbTime">⏱ --</div>
+    <div class="sb" id="sbLnCol">行 1, 列 1</div>
+    <div class="sb" id="sbLang">苦瓜脚本</div>
+    <div class="sb" id="sbSpaces">空格: 4</div>
+    <div class="sb-zoom-wrap" title="缩放字号（Ctrl+/Ctrl-）">
+        <input type="range" id="sbZoom" class="sb-zoom" min="8" max="28" step="1" value="14">
+        <span class="sb-zoom-num" id="sbZoomVal">100%</span>
+    </div>
+    <div class="sb" id="sbTheme" title="切换主题">◐ 深色</div>
+    <div class="sb" id="sbRun" title="运行 (F5)">▶ 未运行</div>
+</div>
+
+<!-- 帮助弹窗 -->
+<div class="overlay" id="helpOverlay">
+    <div class="helpbox">
+        <div class="helpbox-header">
+            <h2>语法帮助</h2>
+            <button id="btnCloseHelp">✕</button>
+        </div>
+        <div class="helpbox-body" id="helpBody"></div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Monaco Editor -->
+<script src="vendor/monaco/vs/loader.js"></script>
+<script src="kugua-compiler.js"></script>
+<script>
+// ================= Monaco 环境配置 =================
+self.MonacoEnvironment = {
+    getWorkerUrl: function() {
+        return '/editor/vendor/monaco/vs/base/worker/workerMain.js';
+    }
+};
+</script>
+<script>
+// ================= 全局状态 =================
+const KuguaCompiler = window.KuguaCompiler;
+const compiler = new KuguaCompiler();
+const state = {
+    files: [],          // 文件树节点
+    tabs: [],           // {path, name, dirty}
+    activePath: null,
+    previewOpen: true,
+    bottomOpen: true,
+    theme: 'dark',
+    themeName: 'kugua-dark',
+    fontSize: 14,
+    running: false
+};
+let editor = null;
+let monaco = null;
+
+// ================= DOM 引用 =================
+const $ = id => document.getElementById(id);
+const editorHost = $('editorHost');
+const treeEl = $('tree');
+const tabsEl = $('tabs');
+const termBody = $('termBody');
+
+// ================= 工具函数 =================
+function escapeHtml(t) {
+    const d = document.createElement('div');
+    d.textContent = t;
+    return d.innerHTML;
+}
+let toastTimer = null;
+function toast(msg) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ================= Terminal 输出 =================
+function termLine(text, cls) {
+    const div = document.createElement('div');
+    div.className = 'term-line' + (cls ? ' ' + cls : '');
+    const ts = new Date();
+    const pad = n => n < 10 ? '0' + n : '' + n;
+    const tsStr = '[' + ts.getFullYear() + '-' + pad(ts.getMonth()+1) + '-' + pad(ts.getDate())
+        + ' ' + pad(ts.getHours()) + ':' + pad(ts.getMinutes()) + ':' + pad(ts.getSeconds()) + ']';
+    div.innerHTML = '<span class="ts">' + tsStr + '</span>' + escapeHtml(text);
+    termBody.appendChild(div);
+    termBody.scrollTop = termBody.scrollHeight;
+    return div;
+}
+function termCmd(text) {
+    const div = document.createElement('div');
+    div.className = 'term-line cmd';
+    div.textContent = '> ' + text;
+    termBody.appendChild(div);
+    termBody.scrollTop = termBody.scrollHeight;
+}
+function clearTerm() { termBody.innerHTML = ''; }
+
+// ================= 沙箱预览 =================
+const SANDBOX_BOOTSTRAP = `
+<script>
+var _logs = [];
+console.log = function() {
+    var msg = Array.prototype.slice.call(arguments).join(' ');
+    parent.postMessage({ type: 'ks-log', text: msg }, '*');
+};
+console.error = function() {
+    var msg = Array.prototype.slice.call(arguments).join(' ');
+    parent.postMessage({ type: 'ks-error', text: msg }, '*');
+};
+window.onerror = function(msg, src, line, col) {
+    parent.postMessage({ type: 'ks-error', text: msg + ' (行' + line + ')' }, '*');
+    return true;
+};
+window.文档 = document;
+window.窗口 = window;
+window.本地存储 = localStorage;
+window.会话存储 = sessionStorage;
+window.数学 = Math;
+window.日期 = Date;
+window.历史 = history;
+window.控制台 = console;
+window.屏幕 = screen;
+window.定位 = location;
+window.弹窗 = typeof alert !== 'undefined' ? alert : function(msg) { console.log(msg); };
+window.询问 = typeof prompt !== 'undefined' ? prompt : function(msg) { console.log('[输入]' + msg); return '1'; };
+window.确认 = typeof confirm !== 'undefined' ? confirm : function(msg) { console.log('[确认]' + msg); return true; };
+window.写入 = typeof document !== 'undefined' ? function(msg) { document.write(msg); } : function(msg) { console.log(msg); };
+window.随机数字 = Math.random;
+window.向下取整 = Math.floor;
+window.向上取整 = Math.ceil;
+window.绝对值 = Math.abs;
+window.转整数 = parseInt;
+window.转数字 = parseFloat;
+window.设置定时器 = setTimeout;
+window.清除定时器 = clearTimeout;
+window.设置循环 = setInterval;
+window.清除循环 = clearInterval;
+window.startLoop = setInterval;
+window.stopLoop = clearInterval;
+window.setT = setTimeout;
+window.clearT = clearTimeout;
+window.请求动画帧 = (typeof requestAnimationFrame !== 'undefined') ? requestAnimationFrame : function(cb) { return setTimeout(cb, 16); };
+window.取消动画帧 = (typeof cancelAnimationFrame !== 'undefined') ? cancelAnimationFrame : clearTimeout;
+Object.defineProperty(window, "对象", { get: function() { return {}; }, configurable: true });
+window.创建对象 = function() { return {}; };
+document.获取元素按id = document.getElementById;
+document.获取元素按标签 = document.getElementsByTagName;
+document.获取元素按类名 = document.getElementsByClassName;
+document.创建元素 = document.createElement;
+document.创建文本节点 = document.createTextNode;
+document.获取元素按选择器 = document.querySelector;
+document.获取所有元素按选择器 = document.querySelectorAll;
+document.身体 = document.body;
+document.主体 = document.body;
+document.头部 = document.head;
+document.标题 = document.title;
+var ElProto = Element.prototype;
+ElProto.设置文本 = function(t) { this.textContent = t; return this; };
+ElProto.设置HTML = function(h) { this.innerHTML = h; return this; };
+ElProto.获取文本 = function() { return this.textContent; };
+ElProto.获取HTML = function() { return this.innerHTML; };
+ElProto.添加事件监听 = function(type, fn) { this.addEventListener(type, fn); return this; };
+ElProto.移除事件监听 = function(type, fn) { this.removeEventListener(type, fn); return this; };
+ElProto.追加子节点 = function(c) { this.appendChild(c); return this; };
+ElProto.移除子节点 = function(c) { this.removeChild(c); return this; };
+ElProto.设置样式 = function(k, v) { this.style[k] = v; return this; };
+ElProto.获取样式 = function(k) { return this.style[k]; };
+ElProto.设置属性 = function(k, v) { this.setAttribute(k, v); return this; };
+ElProto.获取属性 = function(k) { return this.getAttribute(k); };
+ElProto.添加类名 = function(c) { this.classList.add(c); return this; };
+ElProto.移除类名 = function(c) { this.classList.remove(c); return this; };
+window.添加事件监听 = function(type, fn) { this.addEventListener(type, fn); return this; };
+window.移除事件监听 = function(type, fn) { this.removeEventListener(type, fn); return this; };
+if (typeof KeyboardEvent !== 'undefined') {
+    Object.defineProperty(KeyboardEvent.prototype, '键', { get: function() { return this.key; }, configurable: true });
+}
+Storage.prototype.读取 = Storage.prototype.getItem;
+Storage.prototype.保存 = Storage.prototype.setItem;
+Storage.prototype.删除 = Storage.prototype.removeItem;
+parent.postMessage({ type: 'ks-ready' }, '*');
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'ks-run') {
         try {
-            const saved = localStorage.getItem('ks-theme');
-            if (saved === 'light') {
-                document.body.classList.add('light-mode');
-                document.querySelector('.btn-theme') && (document.querySelector('.btn-theme').textContent = '☀');
-            }
-        } catch(e) {}
-
-        // ===== 日期时间格式化 =====
-        function formatTimestamp(d) {
-            const pad = n => n < 10 ? '0' + n : '' + n;
-            return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
-                + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+            var fn = new Function(e.data.code);
+            fn();
+            parent.postMessage({ type: 'ks-done', code: e.data.tag }, '*');
+        } catch (err) {
+            parent.postMessage({ type: 'ks-error', text: err.message }, '*');
         }
+    }
+});
+<\/script>`;
 
-        // ===== 带时间戳的输出追加 =====
-        function appendOutput(text, isError) {
-            const output = document.getElementById('output');
-            if (output.textContent === '等待运行...' || output.textContent === '沙箱已重置，等待运行...') {
-                output.textContent = '';
-            }
-            const ts = formatTimestamp(new Date());
-            // 每行都加时间戳和换行
-            const lines = String(text).split('\n');
-            for (const line of lines) {
-                const div = document.createElement('div');
-                div.className = 'output-line';
-                div.innerHTML = '<span class="output-ts">[' + ts + ']</span>' + escapeHtml(line);
-                output.appendChild(div);
-            }
-            output.className = 'output-content' + (isError ? ' error' : '');
-            output.scrollTop = output.scrollHeight;
+const previewFrame = $('preview');
+let sandboxReady = false;
+let pendingCode = null;
+let runSeq = 0;
+
+function initSandbox() {
+    sandboxReady = false;
+    pendingCode = null;
+    previewFrame.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:10px;color:#000;margin:0}</style></head><body>' + SANDBOX_BOOTSTRAP + '</body></html>';
+}
+
+window.addEventListener('message', function(e) {
+    const data = e.data;
+    if (!data) return;
+    if (data.type === 'ks-ready') {
+        sandboxReady = true;
+        if (pendingCode) {
+            const tag = pendingCode.tag;
+            previewFrame.contentWindow.postMessage({ type: 'ks-run', code: pendingCode.code, tag: tag }, '*');
+            pendingCode = null;
         }
+    } else if (data.type === 'ks-log') {
+        termLine(data.text, 'log');
+    } else if (data.type === 'ks-error') {
+        termLine(data.text, 'error');
+    } else if (data.type === 'ks-done') {
+        termLine('程序运行结束（正常退出）', 'success');
+        $('sbRun').textContent = '▶ 已运行';
+    }
+});
 
-        // ===== iframe 沙箱运行器 =====
-        const SANDBOX_BOOTSTRAP = `
-            <script>
-                var _logs = [];
-                console.log = function() {
-                    var msg = Array.prototype.slice.call(arguments).join(' ');
-                    _logs.push(msg);
-                    parent.postMessage({ type: 'ks-log', text: msg }, '*');
-                };
-                console.error = function() {
-                    var msg = '[错误] ' + Array.prototype.slice.call(arguments).join(' ');
-                    parent.postMessage({ type: 'ks-error', text: msg }, '*');
-                };
-                window.onerror = function(msg, src, line, col) {
-                    parent.postMessage({ type: 'ks-error', text: msg + ' (行' + line + ')' }, '*');
-                    return true;
-                };
+function runInSandbox(jsCode) {
+    clearTerm();
+    termCmd('运行 ' + (state.activePath || '未命名'));
+    const tag = ++runSeq;
+    if (sandboxReady) {
+        previewFrame.contentWindow.postMessage({ type: 'ks-run', code: jsCode, tag: tag }, '*');
+    } else {
+        pendingCode = { code: jsCode, tag: tag };
+    }
+    $('sbRun').textContent = '⏳ 运行中...';
+}
 
-                window.文档 = document;
-                window.窗口 = window;
-                window.本地存储 = localStorage;
-                window.会话存储 = sessionStorage;
-                window.数学 = Math;
-                window.日期 = Date;
-                window.历史 = history;
-                window.控制台 = console;
-                window.屏幕 = screen;
-                window.定位 = location;
-                window.弹窗 = typeof alert !== 'undefined' ? alert : function(msg) { console.log(msg); };
-                window.询问 = typeof prompt !== 'undefined' ? prompt : function(msg) { console.log('[输入]' + msg); return '1'; };
-                window.确认 = typeof confirm !== 'undefined' ? confirm : function(msg) { console.log('[确认]' + msg); return true; };
-                window.写入 = typeof document !== 'undefined' ? function(msg) { document.write(msg); } : function(msg) { console.log(msg); };
-                window.随机数字 = Math.random;
-                window.向下取整 = Math.floor;
-                window.向上取整 = Math.ceil;
-                window.绝对值 = Math.abs;
-                window.转整数 = parseInt;
-                window.转数字 = parseFloat;
-                // 定时器/动画帧（游戏循环需要）
-                window.设置定时器 = setTimeout;
-                window.清除定时器 = clearTimeout;
-                window.设置循环 = setInterval;
-                window.清除循环 = clearInterval;
-                window.startLoop = setInterval;
-                window.stopLoop = clearInterval;
-                window.setT = setTimeout;
-                window.clearT = clearTimeout;
-                window.请求动画帧 = (typeof requestAnimationFrame !== 'undefined') ? requestAnimationFrame : function(cb) { return setTimeout(cb, 16); };
-                window.取消动画帧 = (typeof cancelAnimationFrame !== 'undefined') ? cancelAnimationFrame : clearTimeout;
+// ================= 文件树 =================
+async function loadTree() {
+    treeEl.innerHTML = '<div class="tree-empty">加载中...</div>';
+    try {
+        const res = await fetch('/tree');
+        if (!res.ok) throw new Error(res.status);
+        const files = await res.json();
+        state.files = files.filter(f => f.name.endsWith('.ks'));
+        if (state.files.length === 0) {
+            treeEl.innerHTML = '<div class="tree-empty">没有 .ks 文件</div>';
+            return;
+        }
+        renderTree();
+    } catch (e) {
+        treeEl.innerHTML = '<div class="tree-empty">加载失败: ' + escapeHtml(e.message) + '</div>';
+    }
+}
 
-                document.获取元素按id = document.getElementById;
-                document.获取元素按标签 = document.getElementsByTagName;
-                document.获取元素按类名 = document.getElementsByClassName;
-                document.创建元素 = document.createElement;
-                document.创建文本节点 = document.createTextNode;
-                document.获取元素按选择器 = document.querySelector;
-                document.获取所有元素按选择器 = document.querySelectorAll;
-                document.身体 = document.body;
-                document.头部 = document.head;
-                document.标题 = document.title;
+function renderTree() {
+    treeEl.innerHTML = '';
+    state.files.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'tree-item';
+        item.dataset.path = file.path;
+        if (file.path === state.activePath) item.classList.add('active');
+        item.innerHTML = '<span class="icon">📄</span><span class="fname">' + escapeHtml(file.name) + '</span>';
+        item.addEventListener('click', () => openTab(file.path));
+        treeEl.appendChild(item);
+    });
+}
 
-                var ElProto = Element.prototype;
-                ElProto.设置文本 = function(t) { this.textContent = t; return this; };
-                ElProto.设置HTML = function(h) { this.innerHTML = h; return this; };
-                ElProto.获取文本 = function() { return this.textContent; };
-                ElProto.获取HTML = function() { return this.innerHTML; };
-                ElProto.添加事件监听 = function(type, fn) { this.addEventListener(type, fn); return this; };
-                ElProto.移除事件监听 = function(type, fn) { this.removeEventListener(type, fn); return this; };
-                ElProto.追加子节点 = function(c) { this.appendChild(c); return this; };
-                ElProto.移除子节点 = function(c) { this.removeChild(c); return this; };
-                ElProto.设置样式 = function(k, v) { this.style[k] = v; return this; };
-                ElProto.获取样式 = function(k) { return this.style[k]; };
-                ElProto.设置属性 = function(k, v) { this.setAttribute(k, v); return this; };
-                ElProto.获取属性 = function(k) { return this.getAttribute(k); };
-                ElProto.添加类名 = function(c) { this.classList.add(c); return this; };
-                ElProto.移除类名 = function(c) { this.classList.remove(c); return this; };
-
-                window.添加事件监听 = function(type, fn) { this.addEventListener(type, fn); return this; };
-                window.移除事件监听 = function(type, fn) { this.removeEventListener(type, fn); return this; };
-
-                Storage.prototype.读取 = Storage.prototype.getItem;
-                Storage.prototype.保存 = Storage.prototype.setItem;
-                Storage.prototype.删除 = Storage.prototype.removeItem;
-
-                parent.postMessage({ type: 'ks-ready' }, '*');
-
-                window.addEventListener('message', function(e) {
-                    if (e.data && e.data.type === 'ks-run') {
-                        try {
-                            var fn = new Function(e.data.code);
-                            fn();
-                            parent.postMessage({ type: 'ks-done' }, '*');
-                        } catch (err) {
-                            parent.postMessage({ type: 'ks-error', text: err.message }, '*');
-                        }
-                    }
+// ================= 标签页 =================
+function getTab(path) {
+    return state.tabs.find(t => t.path === path);
+}
+function openTab(path) {
+    const existing = getTab(path);
+    if (existing) {
+        setActiveTab(path);
+        return;
+    }
+    fetch('/file?path=' + encodeURIComponent(path))
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) { termLine(data.error, 'error'); return; }
+            state.tabs.push({ path, name: path.split('/').pop(), dirty: false });
+            renderTabs();
+            setActiveTab(path);
+        });
+}
+function setActiveTab(path) {
+    state.activePath = path;
+    renderTabs();
+    renderTree();
+    const tab = getTab(path);
+    if (!tab) return;
+    // 恢复或创建 editor model
+    const model = monaco.editor.getModel(monaco.Uri.parse('kugua:///' + path));
+    if (!model) {
+        // 从服务器内容读取
+        fetch('/file?path=' + encodeURIComponent(path))
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) { termLine(data.error, 'error'); return; }
+                const m = monaco.editor.createModel(data.content, 'kugua', monaco.Uri.parse('kugua:///' + path));
+                editor.setModel(m);
+                m.onDidChangeContent(() => {
+                    const t = getTab(path);
+                    if (t && !t.dirty) { t.dirty = true; renderTabs(); }
+                    updateStatus();
                 });
-            <\/script>
-        `;
-
-        const sandboxFrame = document.getElementById('sandbox');
-        let sandboxReady = false;
-        let pendingCode = null;
-
-        function initSandbox() {
-            sandboxReady = false;
-            sandboxFrame.srcdoc = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:sans-serif;padding:10px;color:#000}</style></head><body>' + SANDBOX_BOOTSTRAP + '</body></html>';
-        }
-        function resetSandbox() {
-            initSandbox();
-            const output = document.getElementById('output');
-            output.textContent = '沙箱已重置，等待运行...';
-            output.className = 'output-content';
-        }
-        function clearOutput() {
-            document.getElementById('output').textContent = '';
-        }
-
-        // 监听沙箱消息
-        window.addEventListener('message', function(e) {
-            const data = e.data;
-            if (!data) return;
-            if (data.type === 'ks-ready') {
-                sandboxReady = true;
-                if (pendingCode) {
-                    sandboxFrame.contentWindow.postMessage({ type: 'ks-run', code: pendingCode }, '*');
-                    pendingCode = null;
-                }
-            } else if (data.type === 'ks-log') {
-                appendOutput(data.text, false);
-            } else if (data.type === 'ks-error') {
-                appendOutput(data.text, true);
-            }
-        });
-
-        function runInSandbox(jsCode) {
-            const output = document.getElementById('output');
-            output.textContent = '';
-            output.className = 'output-content';
-            if (sandboxReady) {
-                sandboxFrame.contentWindow.postMessage({ type: 'ks-run', code: jsCode }, '*');
+            });
+    } else {
+        editor.setModel(model);
+    }
+    updateStatus();
+}
+function closeTab(path) {
+    const idx = state.tabs.findIndex(t => t.path === path);
+    if (idx < 0) return;
+    state.tabs.splice(idx, 1);
+    if (state.activePath === path) {
+        state.activePath = state.tabs.length ? state.tabs[Math.max(0, idx - 1)].path : null;
+    }
+    renderTabs();
+    if (state.activePath) setActiveTab(state.activePath);
+    else { editor.setModel(null); }
+}
+function renderTabs() {
+    tabsEl.innerHTML = '';
+    state.tabs.forEach(tab => {
+        const t = document.createElement('div');
+        t.className = 'tab' + (tab.path === state.activePath ? ' active' : '') + (tab.dirty ? ' dirty' : '');
+        t.innerHTML = '<span class="dot"></span><span class="tname">' + escapeHtml(tab.name) + '</span><button class="tclose">✕</button>';
+        t.addEventListener('click', e => {
+            if (e.target.classList.contains('tclose')) {
+                e.stopPropagation();
+                closeTab(tab.path);
             } else {
-                pendingCode = jsCode;
-            }
-        }
-
-        const keywords = [
-            '如果', '否则', '是', '不是', '等于', '小于', '大于',
-            '小于等于', '大于等于', '不大于', '不小于', '结果是', '输入',
-            '重复', '循环', '结束', '返回', '说', '定义', '类', '之',
-            '的', '第', '个', '项', '长度', '功能', '方法', '全新',
-            '并且', '或者', '就', '一直', '执行', '次', '开始于', '到',
-            '为止', '每次', '增加', '追加', '去除', '包含', '等价于',
-            '若', '为', '则', '和', '与', '或', '非', '用', '以', '可',
-            '使', '让', '被', '把', '将', '给', '向', '从', '在', '上',
-            '下', '左', '右', '前', '后', '中', '内', '外', '间', '时',
-            '的话', '而已', '而已矣', '罢了', '罢了罢了'
-        ];
-        const booleans = ['正确', '正确的', '真', '真的', '对', '对的', '错误', '错误的', '错', '错的', '不对', '不对的'];
-        const nulls = ['空', '空的', '没了'];
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        function updateHighlight() {
-            const source = document.getElementById('source').value;
-            const highlight = document.getElementById('highlight');
-            let result = '';
-            let i = 0;
-
-            while (i < source.length) {
-                const char = source[i];
-                if (char === '/') {
-                    if (source[i + 1] === '/') {
-                        const end = source.indexOf('\n', i);
-                        const comment = end === -1 ? source.substring(i) : source.substring(i, end);
-                        result += '<span class="comment">' + escapeHtml(comment) + '</span>';
-                        i = end === -1 ? source.length : end;
-                        continue;
-                    } else if (source[i + 1] === '*') {
-                        const end = source.indexOf('*/', i);
-                        const comment = end === -1 ? source.substring(i) : source.substring(i, end + 2);
-                        result += '<span class="comment">' + escapeHtml(comment) + '</span>';
-                        i = end === -1 ? source.length : end + 2;
-                        continue;
-                    }
-                }
-                if (char === '\u201C' || char === '\u3010') {
-                    const endChar = char === '\u201C' ? '\u201D' : '\u3011';
-                    let end = i + 1;
-                    while (end < source.length && source[end] !== endChar) {
-                        if (source[end] === '\\') end++;
-                        end++;
-                    }
-                    const str = source.substring(i, end + 1);
-                    result += '<span class="string">' + escapeHtml(str) + '</span>';
-                    i = end + 1;
-                    continue;
-                }
-                if (/[\u4e00-\u9fa5a-zA-Z_]/.test(char)) {
-                    let j = i;
-                    while (j < source.length && /[\u4e00-\u9fa5a-zA-Z0-9_]/.test(source[j])) j++;
-                    const word = source.substring(i, j);
-                    if (keywords.includes(word)) {
-                        result += '<span class="keyword">' + escapeHtml(word) + '</span>';
-                    } else if (booleans.includes(word)) {
-                        result += '<span class="boolean">' + escapeHtml(word) + '</span>';
-                    } else if (nulls.includes(word)) {
-                        result += '<span class="null">' + escapeHtml(word) + '</span>';
-                    } else {
-                        result += '<span class="identifier">' + escapeHtml(word) + '</span>';
-                    }
-                    i = j;
-                    continue;
-                }
-                if (/[0-9]/.test(char)) {
-                    let j = i;
-                    while (j < source.length && /[0-9.]/.test(source[j])) j++;
-                    const num = source.substring(i, j);
-                    result += '<span class="number">' + escapeHtml(num) + '</span>';
-                    i = j;
-                    continue;
-                }
-                if ('\u3002\uFF0C\u3001\uFF1A\uFF1B\uFF08\uFF09\u3010\u3011\u300A\u300B\uFF1F\uFF01\u2026\u2014'.includes(char)) {
-                    result += '<span class="punctuation">' + escapeHtml(char) + '</span>';
-                } else {
-                    result += escapeHtml(char);
-                }
-                i++;
-            }
-            highlight.innerHTML = result;
-            updateStatus();
-        }
-
-        function updateStatus() {
-            const source = document.getElementById('source').value;
-            const lines = source.split('\n');
-            const textarea = document.getElementById('source');
-            const cursorPos = textarea.selectionStart;
-            const beforeCursor = source.substring(0, cursorPos);
-            document.getElementById('lineCount').textContent = lines.length;
-            document.getElementById('columnCount').textContent = beforeCursor.length - beforeCursor.lastIndexOf('\n');
-        }
-
-        function compileCode() {
-            const source = document.getElementById('source').value;
-            const output = document.getElementById('output');
-            const compiled = document.getElementById('compiled');
-            try {
-                const jsCode = compiler.compile(source);
-                compiled.value = jsCode;
-                appendOutput('编译成功！', false);
-            } catch (error) {
-                appendOutput(error.message, true);
-                compiled.value = '';
-            }
-        }
-
-        function runCode() {
-            const source = document.getElementById('source').value;
-            try {
-                const jsCode = compiler.compile(source);
-                document.getElementById('compiled').value = jsCode;
-                runInSandbox(jsCode);
-            } catch (error) {
-                appendOutput(error.message, true);
-            }
-        }
-
-        function clearAll() {
-            document.getElementById('source').value = '';
-            document.getElementById('compiled').value = '';
-            document.getElementById('output').textContent = '等待运行...';
-            document.getElementById('output').className = 'output-content';
-            resetSandbox();
-            updateHighlight();
-        }
-
-        document.getElementById('source').addEventListener('keydown', function(e) {
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const start = this.selectionStart, end = this.selectionEnd;
-                this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
-                this.selectionStart = this.selectionEnd = start + 4;
-                updateHighlight();
+                setActiveTab(tab.path);
             }
         });
-        document.getElementById('source').addEventListener('scroll', function() {
-            const highlight = document.getElementById('highlight');
-            highlight.scrollTop = this.scrollTop;
-            highlight.scrollLeft = this.scrollLeft;
+        tabsEl.appendChild(t);
+    });
+    const add = document.createElement('button');
+    add.className = 'tab-add';
+    add.textContent = '＋';
+    add.title = '新建文件';
+    add.addEventListener('click', newFile);
+    tabsEl.appendChild(add);
+}
+
+// ================= 保存 =================
+async function saveFile(path, content) {
+    try {
+        const res = await fetch('/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path: path, content: content })
         });
-        document.getElementById('source').addEventListener('click', updateStatus);
-        document.getElementById('source').addEventListener('keyup', updateStatus);
+        const data = await res.json();
+        if (data.error) { termLine('保存失败: ' + data.error, 'error'); return false; }
+        const tab = getTab(path);
+        if (tab) tab.dirty = false;
+        renderTabs();
+        toast('已保存 ' + path);
+        return true;
+    } catch (e) {
+        termLine('保存失败: ' + e.message, 'error');
+        return false;
+    }
+}
+function saveActive() {
+    if (!state.activePath) { toast('没有打开的文件'); return; }
+    const content = editor.getValue();
+    saveFile(state.activePath, content);
+}
 
-        async function loadFiles() {
-            const selector = document.getElementById('fileSelector');
-            selector.innerHTML = '<option value="">选择文件...</option>';
-            try {
-                const response = await fetch('manifest.json');
-                if (response.ok) {
-                    const files = await response.json();
-                    files.forEach(fileName => {
-                        const option = document.createElement('option');
-                        option.value = fileName;
-                        option.textContent = fileName;
-                        selector.appendChild(option);
-                    });
-                }
-            } catch (error) { console.error('加载文件列表失败:', error); }
+// ================= 新建文件 =================
+function newFile() {
+    const name = prompt('新文件名（.ks）:', '新脚本.ks');
+    if (!name) return;
+    const path = name.endsWith('.ks') ? name : name + '.ks';
+    if (getTab(path)) { setActiveTab(path); return; }
+    state.tabs.push({ path, name: path.split('/').pop(), dirty: true });
+    const m = monaco.editor.createModel('', 'kugua', monaco.Uri.parse('kugua:///' + path));
+    renderTabs();
+    setActiveTab(path);
+    editor.setModel(m);
+    m.onDidChangeContent(() => {
+        const t = getTab(path);
+        if (t && !t.dirty) { t.dirty = true; renderTabs(); }
+        updateStatus();
+    });
+    editor.focus();
+}
+
+// ================= 编译 / 运行 =================
+function compileActive() {
+    if (!state.activePath) { toast('请先打开文件'); return; }
+    const source = editor.getValue();
+    try {
+        const jsCode = compiler.compile(source);
+        termCmd('编译 ' + state.activePath);
+        termLine('编译成功，生成 ' + jsCode.split('\n').length + ' 行 JavaScript', 'success');
+        return jsCode;
+    } catch (e) {
+        termLine('编译失败: ' + e.message, 'error');
+        return null;
+    }
+}
+function runActive() {
+    const jsCode = compileActive();
+    if (jsCode === null) return;
+    runInSandbox(jsCode);
+}
+
+// ================= 状态栏 =================
+function updateStatus() {
+    const pos = editor.getPosition();
+    if (pos) {
+        $('sbLnCol').textContent = '行 ' + pos.lineNumber + ', 列 ' + pos.column;
+    }
+    setInterval(() => {
+        const d = new Date();
+        const pad = n => n < 10 ? '0' + n : '' + n;
+        $('sbTime').textContent = '⏱ ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+    }, 1000);
+}
+
+// ================= 主题 =================
+function applyTheme() {
+    if (state.theme === 'dark') {
+        document.body.classList.remove('light-mode');
+        monaco.editor.setTheme('kugua-dark');
+        $('sbTheme').textContent = '◐ 深色';
+    } else {
+        document.body.classList.add('light-mode');
+        monaco.editor.setTheme('kugua-light');
+        $('sbTheme').textContent = '◐ 浅色';
+    }
+    try { localStorage.setItem('ks-theme', state.theme); } catch(e) {}
+}
+function toggleTheme() {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    applyTheme();
+}
+
+// ================= 侧边栏 / 面板开关 =================
+function setSidebarVisible(show) {
+    $('sidebar').classList.toggle('hidden', !show);
+    $('sidebarTitle').textContent = '资源管理器';
+}
+function togglePreview() {
+    state.previewOpen = !state.previewOpen;
+    $('previewPanel').classList.toggle('hidden', !state.previewOpen);
+    if (state.previewOpen) initSandbox();
+}
+function toggleBottom() {
+    state.bottomOpen = !state.bottomOpen;
+    $('bottomPanel').classList.toggle('hidden', !state.bottomOpen);
+}
+
+// ================= 菜单系统 =================
+const menus = {
+    file: [
+        { label: '新建文件', kbd: 'Ctrl+N', action: newFile },
+        { label: '打开文件...', kbd: 'Ctrl+O', action: () => setSidebarVisible(true) },
+        { sep: true },
+        { label: '保存', kbd: 'Ctrl+S', action: saveActive },
+        { sep: true },
+        { label: '退出预览', action: togglePreview }
+    ],
+    run: [
+        { label: '编译', kbd: 'Ctrl+Shift+B', action: compileActive },
+        { label: '运行', kbd: 'F5', action: runActive },
+        { sep: true },
+        { label: '清空输出', action: () => { clearTerm(); } },
+        { label: '重置沙箱', action: initSandbox }
+    ],
+    view: [
+        { label: '切换主题', kbd: 'Ctrl+K T', action: toggleTheme },
+        { sep: true },
+        { label: '显示/隐藏 资源管理器', kbd: 'Ctrl+B', action: () => { const s = $('sidebar'); setSidebarVisible(s.classList.contains('hidden')); } },
+        { label: '显示/隐藏 预览', action: togglePreview },
+        { label: '显示/隐藏 输出面板', kbd: 'Ctrl+J', action: toggleBottom }
+    ],
+    help: [
+        { label: '语法规则', kbd: 'F1', action: openHelp }
+    ]
+};
+
+function closeAllMenus() {
+    document.querySelectorAll('.menu-dropdown').forEach(el => el.remove());
+    document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('open'));
+}
+function openMenu(name) {
+    closeAllMenus();
+    const item = document.querySelector('.menu-item[data-menu="' + name + '"]');
+    const dd = document.createElement('div');
+    dd.className = 'menu-dropdown open';
+    menus[name].forEach(entry => {
+        if (entry.sep) {
+            const d = document.createElement('div');
+            d.className = 'sep';
+            dd.appendChild(d);
+        } else {
+            const b = document.createElement('button');
+            b.className = 'mi';
+            b.innerHTML = '<span>' + entry.label + '</span>' + (entry.kbd ? '<span class="kbd">' + entry.kbd + '</span>' : '');
+            b.addEventListener('click', () => { closeAllMenus(); entry.action(); });
+            dd.appendChild(b);
         }
+    });
+    item.appendChild(dd);
+    item.classList.add('open');
+}
+document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('click', e => {
+        e.stopPropagation();
+        const name = item.dataset.menu;
+        const existing = item.querySelector('.menu-dropdown');
+        if (existing) { closeAllMenus(); return; }
+        openMenu(name);
+    });
+});
+document.addEventListener('click', closeAllMenus);
 
-        async function loadFile() {
-            const selector = document.getElementById('fileSelector');
-            const fileName = selector.value;
-            if (!fileName) return;
-            try {
-                const response = await fetch('../test/' + encodeURIComponent(fileName));
-                if (!response.ok) { alert('文件不存在: ' + fileName); return; }
-                const content = await response.text();
-                document.getElementById('source').value = content;
-                updateHighlight();
-                document.getElementById('compiled').value = '';
-                document.getElementById('output').textContent = '等待运行...';
-                document.getElementById('output').className = 'output-content';
-            } catch (error) { alert('加载文件失败: ' + error.message); }
+// ================= 活动栏 =================
+document.querySelectorAll('.ab').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        document.querySelectorAll('.ab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (view === 'explorer') {
+            setSidebarVisible(true);
+        } else if (view === 'preview') {
+            togglePreview();
+        } else if (view === 'help') {
+            openHelp();
         }
+    });
+});
 
-        const sampleCode = `// 苦瓜脚本示例
-数：1。
-字符串：“你好，世界！”。
-
-如果（数 小于 10）：
-    说（字符串）。
+// ================= 帮助 =================
+const HELP_CONTENT = `
+<h3>苦瓜脚本语言</h3>
+<p>一门全中文语法的脚本语言。以下为常用语法示例。</p>
+<h3>变量与赋值</h3>
+<pre>数：1。
+字符串：“你好”。
+名字：空。</pre>
+<h3>条件判断</h3>
+<pre>如果（数 小于 10）：
+    说（“小”）。
 否则：
-    说（“数太大了”）。
-
-重复（开始于i=0，到i小于5为止，每次i++）：
-    说（i）。
-
-数学：
+    说（“大”）。</pre>
+<p>条件可以省略括号，且可用冒号或逗号结尾进入分支：</p>
+<pre>如果 数 小于 10，
+    说（“小”）。
+否则，
+    说（“大”）。</pre>
+<h3>循环</h3>
+<pre>重复 从 i=0 到 i&lt;5 每次 i++：
+    说（i）。</pre>
+<pre>循环 5 次（_i）：
+    说（_i）。</pre>
+<h3>函数定义</h3>
+<pre>加法：输入“a”、“b”；
+    结果是 a + b。
+说（加法（3，5））。</pre>
+<h3>类与对象</h3>
+<pre>数学：
     加法：输入“a”、“b”；
-        结果是a + b。
+        结果是 a + b。
+说（数学之加法（3，5））。</pre>
+<h3>常用内置函数</h3>
+<ul>
+    <li><code>说（x）</code> — 输出到终端</li>
+    <li><code>弹窗（x）</code> — 弹窗提示</li>
+    <li><code>向下取整（x）</code> / <code>向上取整（x）</code></li>
+    <li><code>随机数字（）</code> — 0~1 随机数</li>
+    <li><code>设置定时器（函数，毫秒）</code> / <code>设置循环（函数，毫秒）</code></li>
+</ul>
+<h3>DOM 操作（沙箱预览可用）</h3>
+<pre>文档之创建元素（“div”）。
+文档之身体之追加子节点（页）。
+元素之设置样式（“color”，“red”）。
+元素之设置文本（“你好”）。
+元素之添加事件监听（“click”，函数）。</pre>
+<h3>快捷键</h3>
+<ul>
+    <li><code>F5</code> / <code>Ctrl+Enter</code> — 运行</li>
+    <li><code>Ctrl+S</code> — 保存</li>
+    <li><code>Ctrl+J</code> — 开关输出面板</li>
+    <li><code>Ctrl+B</code> — 开关资源管理器</li>
+    <li><code>Ctrl+K T</code> — 切换主题</li>
+</ul>
+`;
+function openHelp() {
+    $('helpBody').innerHTML = HELP_CONTENT;
+    $('helpOverlay').classList.add('open');
+}
+$('btnCloseHelp').addEventListener('click', () => $('helpOverlay').classList.remove('open'));
+$('helpOverlay').addEventListener('click', e => { if (e.target === $('helpOverlay')) $('helpOverlay').classList.remove('open'); });
 
-说（数学之加法（3，5））。`;
+// ================= 拖拽缩放 =================
+function setupResizer(handle, target, axis) {
+    let start = 0, startSize = 0;
+    handle.addEventListener('mousedown', e => {
+        e.preventDefault();
+        start = axis === 'x' ? e.clientX : e.clientY;
+        startSize = axis === 'x' ? target.offsetWidth : target.offsetHeight;
+        const move = ev => {
+            const delta = axis === 'x' ? start - ev.clientX : start - ev.clientY;
+            if (axis === 'x') {
+                const w = Math.min(Math.max(startSize + delta, 200), window.innerWidth * 0.7);
+                target.style.width = w + 'px';
+            } else {
+                const h = Math.min(Math.max(startSize + delta, 80), window.innerHeight * 0.7);
+                target.style.height = h + 'px';
+            }
+        };
+        const up = () => {
+            document.removeEventListener('mousemove', move);
+            document.removeEventListener('mouseup', up);
+        };
+        document.addEventListener('mousemove', move);
+        document.addEventListener('mouseup', up);
+    });
+}
+setupResizer($('previewResizer'), $('previewPanel'), 'x');
+setupResizer($('bottomResizer'), $('bottomPanel'), 'y');
 
-        document.getElementById('source').value = sampleCode;
-        updateHighlight();
-        loadFiles();
-        initSandbox();
-    </script>
+// ================= 初始化 =================
+$('btnRefresh').addEventListener('click', loadTree);
+$('btnNewFile').addEventListener('click', newFile);
+$('btnRefreshPreview').addEventListener('click', initSandbox);
+$('btnClearTerm').addEventListener('click', clearTerm);
+$('btnToggleTerm').addEventListener('click', toggleBottom);
+$('sbTheme').addEventListener('click', toggleTheme);
+$('sbRun').addEventListener('click', runActive);
+
+// 读取保存的主题
+try {
+    const saved = localStorage.getItem('ks-theme');
+    if (saved === 'light') state.theme = 'light';
+} catch(e) {}
+
+// Monaco 加载（显式配置 vs 路径，避免 baseUrl 误判）
+require.config({ paths: { vs: '/editor/vendor/monaco/vs' } });
+require(['vs/editor/editor.main'], function() {
+    monaco = window.monaco;
+
+    // ===== 注册苦瓜脚本语言 =====
+    monaco.languages.register({ id: 'kugua', extensions: ['.ks'] });
+    // 自定义分词规则：只有汉字/字母/数字/下划线构成一个"词"，
+    // 双击时只选中当前指针下的单个关键词，全角标点（：、（）等）不会被框进选区
+    monaco.languages.setLanguageConfiguration('kugua', {
+        wordPattern: /[\u4e00-\u9fa5A-Za-z0-9_]+/g
+    });
+    monaco.languages.setMonarchTokensProvider('kugua', {
+        defaultToken: 'identifier',
+        keywords: [
+            '如果','否则','是','不是','等于','小于','大于','小于等于','大于等于','不大于','不小于',
+            '并且','或者','非','和','与','或','就','一直','执行','循环','重复','到','为止','每次','增加',
+            '开始于','结束','返回','结果是','输入','说','定义','类','之','的','追加','去除','包含','等价于',
+            '真','假','全新','功能','方法'
+        ],
+        booleans: ['正确','正确的','真','真的','对','对的','错误','错误的','错','错的','不对','不对的'],
+        nulls: ['空','空的'],
+        tokenizer: {
+            root: [
+                [/\s+/, 'white'],
+                [/\/\/.*$/, 'comment'],
+                [/\/\*/, 'comment', '@comment'],
+                [/[。，、；：（）【】《》？！…—]/, 'punctuation'],
+                [/[?]/, 'operator'],
+                // 中文引号字符串：“内容” 或 ”内容“（左/右双向兼容）
+                [/“[^“”\\]*(?:\\.[^“”\\]*)*”/, 'string'],
+                [/”[^“”\\]*(?:\\.[^“”\\]*)*“/, 'string'],
+                [/\d+(\.\d+)?/, 'number'],
+                [/(?:\btrue\b|\bfalse\b)/, 'boolean'],
+                [/\bnull\b/, 'null'],
+                [/[a-zA-Z_][a-zA-Z0-9_]*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
+                // 空值（null）
+                [/(空|没了)/, 'null'],
+                // 布尔值
+                [/(正确的|真的|对的|错的|正确|错误|对|错|真|假|是|不对)/, 'boolean'],
+                // 循环/条件 控制流
+                [/(开始于|如果|否则|循环|重复|到|为止|每次|一直|执行|返回|结束|选择|情况)/, 'control'],
+                // 赋值/比较/逻辑 运算符
+                [/(小于等于|大于等于|不大于|不小于|等价于|并且|或者|不是|等于|小于|大于|增加|和|与|或|非)/, 'operator'],
+                // 其他关键字（说/输入/函数/类/成员访问等）
+                [/(结果是|输入|定义|追加|去除|包含|说|类|之|的|功能|方法|全新)/, 'keyword'],
+                // 其余中文作为标识符；遇成员访问符"的/之/是"拆分，使嵌入的"的/之/是"可被标出
+                [/[\u4e00-\u9fff](?:(?![的之是])[\u4e00-\u9fff])*/, 'identifier']
+            ],
+            comment: [
+                [/\*\//, 'comment', '@pop'],
+                [/./, 'comment']
+            ]
+        }
+    });
+
+    // 语法折叠/格式化
+    monaco.languages.registerFoldingRangeProvider('kugua', {
+        provideFoldingRanges: function(model) {
+            const ranges = [];
+            let stack = [];
+            const lines = model.getLinesContent();
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                const trimmed = line.trim();
+                // 分支头（如果/否则/循环/重复/定义/类等）以冒号或行末逗号结尾时进入下一级缩进
+                if (/^(如果|否则|循环|重复|定义|类|数学|功能|方法)/.test(trimmed) && /[：，]$/.test(trimmed)) {
+                    stack.push(i);
+                } else if (trimmed === '' ) {
+                    // 空行作为可能的结束
+                }
+            }
+            return ranges;
+        }
+    });
+
+    // ===== 自定义主题 =====
+    monaco.editor.defineTheme('kugua-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+            { token: 'keyword', foreground: 'c678dd', fontStyle: 'bold' },
+            { token: 'control', foreground: '61afef', fontStyle: 'bold' },
+            { token: 'operator', foreground: '56b6c2' },
+            { token: 'null', foreground: '7f848e', fontStyle: 'italic' },
+            { token: 'string', foreground: '98c379' },
+            { token: 'number', foreground: 'd19a66' },
+            { token: 'comment', foreground: '5c6370', fontStyle: 'italic' },
+            { token: 'identifier', foreground: 'e06c75' },
+            { token: 'punctuation', foreground: '56b6c2' },
+            { token: 'boolean', foreground: 'e5c07b', fontStyle: 'bold' }
+        ],
+        colors: {
+            'editor.background': '#1e1e1e',
+            'editor.foreground': '#d4d4d4',
+            'editor.lineHighlightBackground': '#2a2a2a',
+            'editorCursor.foreground': '#f8f8f0',
+            'editor.selectionBackground': '#264f78'
+        }
+    });
+    monaco.editor.defineTheme('kugua-light', {
+        base: 'vs',
+        inherit: true,
+        rules: [
+            { token: 'keyword', foreground: 'a626a4', fontStyle: 'bold' },
+            { token: 'control', foreground: '0550ae', fontStyle: 'bold' },
+            { token: 'operator', foreground: '0184bc' },
+            { token: 'null', foreground: '6a737d', fontStyle: 'italic' },
+            { token: 'string', foreground: '50a14f' },
+            { token: 'number', foreground: '986801' },
+            { token: 'comment', foreground: 'a0a1a7', fontStyle: 'italic' },
+            { token: 'identifier', foreground: 'e45649' },
+            { token: 'punctuation', foreground: '0184bc' },
+            { token: 'boolean', foreground: 'c18401', fontStyle: 'bold' }
+        ],
+        colors: {
+            'editor.background': '#ffffff',
+            'editor.lineHighlightBackground': '#f0f0f0'
+        }
+    });
+
+    // ===== 创建编辑器 =====
+    editor = monaco.editor.create(editorHost, {
+        value: '',
+        language: 'kugua',
+        theme: state.theme === 'dark' ? 'kugua-dark' : 'kugua-light',
+        fontFamily: '"Consolas", "Courier New", monospace',
+        fontSize: 14,
+        lineNumbers: 'on',
+        // 缩略图：视口指示条常显，方便看出当前正在查看的代码块
+        minimap: { enabled: true, showSlider: 'always' },
+        automaticLayout: true,
+        scrollBeyondLastLine: false,
+        tabSize: 4,
+        insertSpaces: true,
+        folding: true,
+        renderWhitespace: 'none',
+        bracketPairColorization: { enabled: true },
+        // 关闭括号匹配框（光标靠近括号/冒号时不再出现高亮边框）
+        matchBrackets: 'never',
+        // 关闭 Unicode 易混淆/不可见字符高亮：
+        // 全角 ：，；（）等与 ASCII 形似会被默认标记为"易混淆字符"并画黄色方框
+        unicodeHighlight: {
+            ambiguousCharacters: false,
+            invisibleCharacters: false
+        },
+        // 全角标点也作为分词分隔符：双击时只在分隔符一侧选词，不会跨过 ：，；（）等
+        wordSeparators: "`~!@#$%^&*()-=+[{]}\\|;:'\",.<>/?：；，。、（）《》【】“”‘’？！…—·～",
+        guides: { indentation: true },
+        padding: { top: 6 },
+        wordWrap: 'off'
+    });
+
+    editor.onDidChangeCursorPosition(() => updateStatus());
+
+    // ===== 双击行为 =====
+    // 第一次双击：引号内选中引号之间的全部内容，否则选中当前指针下的单个关键词；
+    // 再次双击同一目标则选中整行
+
+    /**
+     * 查找包裹当前光标位置的引号对（“…”或【…】），返回引号内部内容的范围（不含引号本身）
+     * @returns {{startColumn: number, endColumn: number} | null}
+     */
+    function findQuotedInnerRange(model, pos) {
+        const line = model.getLineContent(pos.lineNumber);
+        const pairs = [['“', '”'], ['【', '】']];
+        let best = null;
+        for (const [open, close] of pairs) {
+            const openIdx = line.lastIndexOf(open, pos.column - 1);
+            if (openIdx < 0) continue;
+            const closeIdx = line.indexOf(close, pos.column - 1);
+            if (closeIdx < 0) continue;
+            // 取最靠近光标的内层引号对
+            if (!best || openIdx > best.openIdx) {
+                best = {
+                    openIdx,
+                    startColumn: openIdx + 2,
+                    endColumn: closeIdx + 1
+                };
+            }
+        }
+        return best;
+    }
+
+    /**
+     * 按苦瓜脚本自身的词法规则查找光标处的词法记号范围。
+     * 即使词语之间没有空格（如 成绩大于等于90），也能只选中单个词。
+     * @returns {{type: string, startColumn: number, endColumn: number} | null}
+     */
+    function getSemanticTokenRange(line, column) {
+        if (typeof KuguaLexer !== 'function') return fallbackTokenRange(line, column);
+        let tokens;
+        try {
+            tokens = new KuguaLexer(line).tokenize();
+        } catch (e) {
+            return fallbackTokenRange(line, column);
+        }
+        for (let i = 0; i < tokens.length - 1; i++) {
+            const tok = tokens[i];
+            const start = tok.column;
+            // 引号内容由 findQuotedInnerRange 处理，这里跳过
+            if (tok.type === 'STRING') continue;
+            let len;
+            if (tok.type === 'NUMBER') {
+                // 数字/布尔/空值的 value 是语义值（数字、true/false、null），长度按原始文本扫描
+                len = 0;
+                for (let j = start - 1; j < line.length && /[0-9.]/.test(line[j]); j++) len++;
+            } else if (tok.type === 'BOOLEAN' || tok.type === 'NULL') {
+                len = 0;
+                for (let j = start - 1; j < line.length && /[\u4e00-\u9fa5A-Za-z0-9_]/.test(line[j]); j++) len++;
+            } else {
+                len = String(tok.value).length;
+            }
+            const end = start + len;
+            if (column >= start && column < end) {
+                return { type: tok.type, startColumn: start, endColumn: end };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 兜底分词：KuguaLexer 不可用/出错时使用。
+     * 按标识符连续段切分，并在成员访问符“之/的”处断开，
+     * 使 文档之创建元素 这类无空格连写仍能只选中单个词。
+     * @returns {{type: string, startColumn: number, endColumn: number} | null}
+     */
+    function fallbackTokenRange(line, column) {
+        const isId = ch => !!ch && /[\u4e00-\u9fa5A-Za-z0-9_]/.test(ch) && ch !== '之' && ch !== '的';
+        const idx = column - 1;
+        if (idx < 0 || idx >= line.length) return null;
+        const ch = line[idx];
+        if (ch === '之' || ch === '的') {
+            return { type: 'KEYWORD', startColumn: idx + 1, endColumn: idx + 2 };
+        }
+        if (!isId(ch)) return null;
+        let s = idx, e = idx;
+        while (s > 0 && isId(line[s - 1])) s--;
+        while (e < line.length - 1 && isId(line[e + 1])) e++;
+        return { type: 'IDENTIFIER', startColumn: s + 1, endColumn: e + 2 };
+    }
+
+    // 双击后需要最终保持的选区。
+    // Monaco 的内部选词（字符级整串选中）可能在事件处理中或动画帧中执行，
+    // 这里统一用“期望选区 + 事后纠正”的方式确保最终选中我们算出的范围。
+    let pendingOverride = null;   // { range: monaco.Range|null, time: number }
+    let applyingOverride = false;
+
+    // 监听选区变化：双击后 Monaco 若改动了选区，纠正回期望范围（不干预单击移动光标）
+    editor.onDidChangeCursorSelection((e) => {
+        if (applyingOverride || !pendingOverride) return;
+        const expected = pendingOverride.range;
+        if (!expected) return;
+        if (Date.now() - pendingOverride.time > 500) { pendingOverride = null; return; }
+        const sel = e.selection;
+        if (!sel || sel.isEmpty()) { pendingOverride = null; return; }
+        if (!sel.equalsRange(expected)) {
+            applyingOverride = true;
+            editor.setSelection(expected);
+            applyingOverride = false;
+        }
+    });
+
+    function enforceSelection(range, time) {
+        pendingOverride = { range, time };
+        editor.setSelection(range);
+        // 双 rAF：等 Monaco 内部处理（可能在动画帧中执行）完成后最终确认一次
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (!pendingOverride || pendingOverride.range !== range) return;
+            if (Date.now() - pendingOverride.time > 500) { pendingOverride = null; return; }
+            const sel = editor.getSelection();
+            if (sel && !sel.equalsRange(range)) {
+                editor.setSelection(range);
+            }
+            pendingOverride = null;
+        }));
+    }
+
+    // 双击诊断输出（定位问题用，确认修复后可移除）
+    function dblLog(...args) {
+        try {
+            if (typeof termLine === 'function') termLine('[双击] ' + args.join(' '), 'log');
+        } catch (e) { /* 忽略 */ }
+        try { console.log('[双击]', ...args); } catch (e) { /* 忽略 */ }
+    }
+
+    let lastDblClickRange = null;
+    editor.onMouseDown((e) => {
+        try {
+            const detail = e.event.browserEvent ? e.event.browserEvent.detail : e.event.detail;
+            // 双击（detail=2）与快速连续双击（detail=4）都算作双击事件
+            if (detail !== 2 && detail !== 4) return;
+            if (!e.event.leftButton) return;
+            // 注意：此构建的公开枚举没有 TEXT 成员，文本目标应为 CONTENT_TEXT（=6）
+            if (!e.target || e.target.type !== monaco.editor.MouseTargetType.CONTENT_TEXT) {
+                dblLog('跳过：target类型=' + (e.target && e.target.type));
+                return;
+            }
+
+            const model = editor.getModel();
+            const pos = e.target.position;
+            if (!model || !pos) return;
+
+            const now = Date.now();
+            // 本次双击的目标范围：优先引号内的内容，否则为当前词
+            const quoted = findQuotedInnerRange(model, pos);
+            let token = null;
+            let targetRange = null;
+            if (quoted) {
+                targetRange = new monaco.Range(pos.lineNumber, quoted.startColumn, pos.lineNumber, quoted.endColumn);
+            } else {
+                const line = model.getLineContent(pos.lineNumber);
+                token = getSemanticTokenRange(line, pos.column);
+                // 标点/括号/运算符不作为双击选词目标（避免选中分隔符另一侧）
+                if (token && token.type !== 'STRING' && token.type !== 'PUNCTUATION'
+                    && token.type !== 'OPERATOR' && token.type !== 'PAREN') {
+                    targetRange = new monaco.Range(pos.lineNumber, token.startColumn, pos.lineNumber, token.endColumn);
+                }
+            }
+
+            dblLog('detail=' + detail,
+                '行=' + pos.lineNumber + '列=' + pos.column,
+                '词法=' + (token ? token.type + '[' + token.startColumn + ',' + token.endColumn + ')' : '无'),
+                '目标=' + (targetRange ? '[' + targetRange.startColumn + ',' + targetRange.endColumn + ')' : '无'));
+
+            // 再次双击同一个目标（同一引号内容或同一词）：选中整行
+            const sameTarget = lastDblClickRange && targetRange
+                && now - lastDblClickRange.time < 600
+                && targetRange.startLineNumber === lastDblClickRange.lineNumber
+                && targetRange.startColumn === lastDblClickRange.startColumn
+                && targetRange.endColumn === lastDblClickRange.endColumn;
+
+            if (sameTarget) {
+                const lineRange = new monaco.Range(
+                    pos.lineNumber, 1,
+                    pos.lineNumber, model.getLineMaxColumn(pos.lineNumber)
+                );
+                lastDblClickRange = null;
+                enforceSelection(lineRange, now);
+                return;
+            }
+
+            // 第一次双击：记录目标范围，供下次双击判断
+            lastDblClickRange = targetRange ? {
+                lineNumber: targetRange.startLineNumber,
+                startColumn: targetRange.startColumn,
+                endColumn: targetRange.endColumn,
+                time: now
+            } : null;
+
+            // 覆盖 Monaco 默认选词：引号内选全部内容，普通位置按语言词法选单个词。
+            // （Monaco 的字符级分词在无空格连写如"文档之创建元素"时会整串选中，必须显式覆盖）
+            if (targetRange) {
+                enforceSelection(targetRange, now);
+            } else {
+                pendingOverride = null;
+            }
+        } catch (err) {
+            dblLog('异常: ' + (err && err.message));
+        }
+    });
+
+    // 光标位置更新
+    editor.onDidChangeModel(() => {
+        const pos = editor.getPosition();
+        if (pos) $('sbLnCol').textContent = '行 ' + pos.lineNumber + ', 列 ' + pos.column;
+    });
+
+    // ===== 快捷键注册（编辑器实例级） =====
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runActive);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, saveActive);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, newFile);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyJ, toggleBottom);
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyB, () => { const s = $('sidebar'); setSidebarVisible(s.classList.contains('hidden')); });
+    editor.addCommand(monaco.KeyCode.F5, runActive);
+    editor.addCommand(monaco.KeyCode.F1, openHelp);
+
+    // 底部面板开关按钮
+    $('btnToggleTerm').addEventListener('click', toggleBottom);
+
+    // ===== 初始化 =====
+    applyTheme();
+    initSandbox();
+    loadTree();
+    updateStatus();
+
+    // 默认打开第一个文件
+    setTimeout(() => {
+        if (state.files.length > 0) {
+            openTab(state.files[0].path);
+        } else {
+            newFile();
+        }
+    }, 200);
+
+    termLine('编辑器已就绪。按 F5 运行，Ctrl+Enter 也可运行。', 'info');
+});
+</script>
 </body>
 </html>

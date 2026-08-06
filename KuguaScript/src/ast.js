@@ -44,6 +44,10 @@ function createBreakStatement() {
     return createNode(NodeType.BreakStatement);
 }
 
+function createArrayExpression(elements) {
+    return createNode(NodeType.ArrayExpression, { elements });
+}
+
 function createFunctionDeclaration(name, params, body) {
     return createNode(NodeType.FunctionDeclaration, { name, params, body });
 }
@@ -111,6 +115,7 @@ module.exports = {
     createReturnStatement,
     createPrintStatement,
     createBreakStatement,
+    createArrayExpression,
     createFunctionDeclaration,
     createClassDeclaration,
     createClassProperty,

@@ -5,6 +5,37 @@
  */
 const C = require('./constants');
 
+// 沙箱内置全局标识符（KS代码运行时由运行环境提供，代码生成器禁止在顶部var声明，
+// 否则会因var变量提升把它们赋值为undefined，导致读取到undefined后报错）
+const SANDBOX_GLOBALS = new Set([
+    // 输入输出
+    '弹窗', '询问', '确认', '写入',
+    // 数学工具
+    '随机数字', '向下取整', '向上取整', '绝对值', '转整数', '转数字',
+    // 定时器
+    '设置定时器', '清除定时器', '设置循环', '清除循环',
+    'startLoop', 'stopLoop', 'setT', 'clearT',
+    '请求动画帧', '取消动画帧',
+    // 对象
+    '对象', '创建对象',
+    // 运行时环境
+    '文档', '窗口', '本地存储', '会话存储',
+    '数学', '日期', '历史', '控制台', '屏幕', '定位',
+    // 常用辅助
+    '说', '追加', '移除',
+    // 布尔/空值（由编译器识别为字面量，此处防御性列出）
+    '空', '正确', '错误'
+]);
+
+// 数组/对象成员别名 → JS 属性/方法
+const MEMBER_ALIAS = {
+    '长度': 'length',
+    '追加': 'push',
+    '移除尾部': 'pop',
+    '移除头部': 'shift',
+    '插入头部': 'unshift'
+};
+
 class CodeGenerator {
     generate(node) {
         return this.visit(node);
@@ -35,7 +66,8 @@ class CodeGenerator {
 
         switch (node.type) {
             case C.NodeType.AssignmentExpression:
-                if (node.left.type === C.NodeType.Identifier) {
+                if (node.left.type === C.NodeType.Identifier
+                    && !SANDBOX_GLOBALS.has(node.left.name)) {
                     names.add(node.left.name);
                 }
                 this._collectVars(node.right, names);
@@ -45,27 +77,30 @@ class CodeGenerator {
                 }
                 break;
             case C.NodeType.VariableDeclaration:
-                if (node.name) names.add(node.name);
+                if (node.name && !SANDBOX_GLOBALS.has(node.name)) names.add(node.name);
                 if (node.value) this._collectVars(node.value, names);
                 break;
             case C.NodeType.FunctionDeclaration:
-                if (node.name) names.add(node.name);
+                if (node.name && !SANDBOX_GLOBALS.has(node.name)) names.add(node.name);
                 for (const p of node.params || []) {
-                    if (p.name) names.add(p.name);
+                    if (p.name && !SANDBOX_GLOBALS.has(p.name)) names.add(p.name);
                 }
                 this._collectVars(node.body, names);
                 break;
             case C.NodeType.ClassDeclaration:
-                if (node.name) names.add(node.name);
+                if (node.name && !SANDBOX_GLOBALS.has(node.name)) names.add(node.name);
                 this._collectVars(node.body, names);
                 break;
             case C.NodeType.ClassProperty:
-                if (node.name) names.add(node.name);
+                if (node.name && !SANDBOX_GLOBALS.has(node.name)) names.add(node.name);
                 if (node.value) this._collectVars(node.value, names);
                 break;
             case C.NodeType.UpdateExpression:
                 // i++ 中的i
-                if (node.argument && node.argument.name) names.add(node.argument.name);
+                if (node.argument && node.argument.name
+                    && !SANDBOX_GLOBALS.has(node.argument.name)) {
+                    names.add(node.argument.name);
+                }
                 break;
             default:
                 // 遍历所有对象属性
@@ -235,9 +270,21 @@ class CodeGenerator {
                 // 成员访问
                 [C.NodeType.MemberExpression]: (node) => {
                     if (node.computed) {
-                        return `${this.visit(node.object)}[${this.visit(node.property)}]`;
+                        // 第X项 索引访问为中文1基语义（第1项→索引0）
+                        return `${this.visit(node.object)}[(${this.visit(node.property)} - 1)]`;
                     }
-                    return `${this.visit(node.object)}.${this.visit(node.property)}`;
+                    let prop = this.visit(node.property);
+                    // 中文方法/属性别名 → JS 原生（如 之长度→.length、之追加→.push）
+                    if (node.property.type === C.NodeType.Identifier && MEMBER_ALIAS[node.property.name]) {
+                        prop = MEMBER_ALIAS[node.property.name];
+                    }
+                    return `${this.visit(node.object)}.${prop}`;
+                },
+
+                // 数组字面量：《元素1、元素2、…》
+                [C.NodeType.ArrayExpression]: (node) => {
+                    const elems = node.elements.map(el => this.visit(el));
+                    return `[${elems.join(', ')}]`;
                 },
 
                 // 标识符

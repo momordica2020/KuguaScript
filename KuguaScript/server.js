@@ -108,21 +108,107 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // 安全校验：确保路径位于 test 目录内
+    function safeTestPath(relPath) {
+        const testDir = path.resolve(__dirname, 'test');
+        const full = path.resolve(testDir, relPath || '');
+        if (full !== testDir && !full.startsWith(testDir + path.sep)) return null;
+        return full;
+    }
+
+    // 文件树接口（递归列出 test 目录）
+    if (pathname === '/tree' && req.method === 'GET') {
+        const testDir = path.join(__dirname, 'test');
+        (function walk(dir) {
+            fs.readdir(dir, { withFileTypes: true }, (err, entries) => {
+                if (err) {
+                    res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify({ error: err.message }));
+                    return;
+                }
+                const nodes = [];
+                entries.sort((a, b) => {
+                    if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? 1 : -1;
+                    return a.name.localeCompare(b.name, 'zh-CN');
+                });
+                let pending = entries.length;
+                if (pending === 0) {
+                    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify(nodes));
+                    return;
+                }
+                entries.forEach(entry => {
+                    const abs = path.join(dir, entry.name);
+                    const rel = path.relative(testDir, abs);
+                    if (entry.isDirectory()) {
+                        walk(abs);
+                    } else {
+                        const stats = fs.statSync(abs);
+                        nodes.push({
+                            name: entry.name,
+                            path: rel.split(path.sep).join('/'),
+                            type: 'file',
+                            size: stats.size,
+                            modified: stats.mtime.toLocaleString('zh-CN')
+                        });
+                        if (--pending === 0) {
+                            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                            res.end(JSON.stringify(nodes));
+                        }
+                    }
+                });
+            });
+        })(testDir);
+        return;
+    }
+
     if (pathname === '/file' && req.method === 'GET') {
-        const fileName = parsedUrl.query.name;
-        if (!fileName || !fileName.endsWith('.ks')) {
+        const relPath = parsedUrl.query.path || '';
+        const filePath = safeTestPath(relPath);
+        if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
             res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
-            res.end(JSON.stringify({ error: '无效的文件名' }));
+            res.end(JSON.stringify({ error: '无效的文件路径' }));
             return;
         }
-        const filePath = path.join(__dirname, 'test', fileName);
         fs.readFile(filePath, 'utf-8', (err, content) => {
             if (err) {
                 res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end(JSON.stringify({ error: '文件不存在' }));
+                res.end(JSON.stringify({ error: '文件读取失败' }));
             } else {
                 res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end(JSON.stringify({ content: content, name: fileName }));
+                res.end(JSON.stringify({ content: content, name: relPath }));
+            }
+        });
+        return;
+    }
+
+    // 保存文件到 test 目录
+    if (pathname === '/save' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                const relPath = data.path || '';
+                const filePath = safeTestPath(relPath);
+                if (!filePath) {
+                    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify({ error: '无效的文件路径' }));
+                    return;
+                }
+                fs.mkdirSync(path.dirname(filePath), { recursive: true });
+                fs.writeFile(filePath, String(data.content ?? ''), 'utf-8', (err) => {
+                    if (err) {
+                        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ error: err.message }));
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ ok: true, name: relPath }));
+                    }
+                });
+            } catch (error) {
+                res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ error: error.message }));
             }
         });
         return;

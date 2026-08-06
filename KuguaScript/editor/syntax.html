@@ -153,9 +153,9 @@
 
         <div class="section">
             <h2>一、基本结构</h2>
-            <p>苦瓜脚本语言使用全角中文标点作为语句分隔符，句号（。）结束一条语句，冒号（：）用于定义，分号（；）用于函数定义后。</p>
+            <p>苦瓜脚本语言使用全角中文标点作为语句分隔符：句号（。）结束一条语句（可省略），冒号（：）用于定义，分号（；）用于函数定义后。</p>
             <div class="code-block">变量名：值。</div>
-            <div class="note">每条语句必须以句号（。）结尾。函数定义以分号（；）结尾后接函数体。</div>
+            <div class="note">语句通常以句号（。）结尾，句号可省略；函数定义以分号（；）结尾后接函数体。</div>
         </div>
 
         <div class="section">
@@ -208,21 +208,41 @@
             <table>
                 <tr><th>含义</th><th>关键字</th><th>示例</th></tr>
                 <tr><td>与（AND）</td><td><code>并且</code> / 顿号<code>、</code></td><td><code>正确 并且 正确</code></td></tr>
-                <tr><td>或（OR）</td><td><code>或者</code> / 逗号<code>，</code></td><td><code>正确 或者 错误</code></td></tr>
+                <tr><td>或（OR）</td><td><code>或者</code> / 同行逗号<code>，</code></td><td><code>正确 或者 错误</code></td></tr>
                 <tr><td>非（NOT）</td><td><code>非</code></td><td><code>非 正确</code></td></tr>
             </table>
         </div>
 
         <div class="section">
             <h2>五、条件语句</h2>
-            <p>使用<span class="keyword">如果</span>、<span class="keyword">否则如果</span>、<span class="keyword">否则</span>进行条件判断。条件用括号（）括起，冒号（：）结尾。</p>
+            <p>使用<span class="keyword">如果</span>、<span class="keyword">否则如果</span>、<span class="keyword">否则</span>进行条件判断。条件的括号可以省略，分支分隔符既可以用冒号（：）也可以用逗号（，）。</p>
+            <h3>写法一：括号 + 冒号（传统写法）</h3>
             <div class="code-block">如果（成绩 大于等于 90）：
     说（“优秀”）。
 否则如果（成绩 大于等于 60）：
     说（“及格”）。
 否则：
     说（“不及格”）。</div>
-            <div class="note">代码块通过缩进区分，子语句的缩进必须大于父语句。</div>
+            <h3>写法二：省略括号</h3>
+            <div class="code-block">如果 成绩 大于等于 90：
+    说（“优秀”）。
+否则如果 成绩 大于等于 60，
+    说（“及格”）。</div>
+            <h3>写法三：逗号结尾进入分支</h3>
+            <div class="code-block">如果 成绩 大于等于 90，
+    说（“优秀”）。
+否则，
+    说（“不及格”）。</div>
+            <h3>选择语句（按值匹配）</h3>
+            <p>使用<span class="keyword">选择</span>按值匹配分支，<span class="keyword">情况</span>定义匹配分支，<span class="keyword">否则</span>为默认分支，分隔符同样支持冒号或逗号。</p>
+            <div class="code-block">选择（等级）：
+    情况 1，
+        说（“一级”）。
+    情况 2：
+        说（“二级”）。
+    否则：
+        说（“其他”）。</div>
+            <div class="note">逗号（，）在同一行内仍表示逻辑或（OR）；作为分支分隔符时通常位于行末，换行后跟缩进的分支块。代码块通过缩进区分，子语句的缩进必须大于父语句。</div>
         </div>
 
         <div class="section">
@@ -272,10 +292,10 @@
             <h2>十、标点符号速查</h2>
             <table>
                 <tr><th>标点</th><th>用途</th></tr>
-                <tr><td><code>。</code></td><td>语句结束（相当于分号 ;）</td></tr>
-                <tr><td><code>：</code></td><td>定义/赋值（相当于等号 =）</td></tr>
+                <tr><td><code>。</code></td><td>语句结束（相当于分号 ;，可省略）</td></tr>
+                <tr><td><code>：</code></td><td>定义/赋值（相当于等号 =）/ 分支分隔符（如果…：）</td></tr>
                 <tr><td><code>；</code></td><td>函数头结束，接函数体</td></tr>
-                <tr><td><code>，</code></td><td>参数分隔 / 逻辑或（OR）</td></tr>
+                <tr><td><code>，</code></td><td>参数分隔 / 同行逻辑或（OR）/ 行末分支分隔符（如果…，）</td></tr>
                 <tr><td><code>、</code></td><td>参数分隔 / 逻辑与（AND）</td></tr>
                 <tr><td><code>（）</code></td><td>括号分组 / 函数调用</td></tr>
                 <tr><td><code>“”</code></td><td>字符串引号</td></tr>
@@ -287,7 +307,7 @@
             <h2>十一、关键字列表</h2>
             <table>
                 <tr><th>类别</th><th>关键字</th></tr>
-                <tr><td>控制流</td><td><code>如果</code> <code>否则</code> <code>重复</code> <code>循环</code> <code>结束</code> <code>次</code></td></tr>
+                <tr><td>控制流</td><td><code>如果</code> <code>若</code> <code>否则</code> <code>重复</code> <code>循环</code> <code>结束</code> <code>次</code> <code>以上</code> <code>选择</code> <code>情况</code></td></tr>
                 <tr><td>循环控制</td><td><code>开始于</code> <code>到</code> <code>为止</code> <code>每次</code></td></tr>
                 <tr><td>函数</td><td><code>输入</code> <code>返回</code> <code>结果是</code> <code>说</code></td></tr>
                 <tr><td>类与对象</td><td><code>类</code> <code>之</code> <code>的</code></td></tr>

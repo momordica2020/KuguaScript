@@ -28,6 +28,7 @@ const NodeType = {
     ReturnStatement: 'ReturnStatement',
     PrintStatement: 'PrintStatement',
     BreakStatement: 'BreakStatement',
+    ArrayExpression: 'ArrayExpression',
     FunctionDeclaration: 'FunctionDeclaration',
     ClassDeclaration: 'ClassDeclaration',
     ClassProperty: 'ClassProperty',
@@ -47,7 +48,7 @@ const NodeType = {
 // ==================== 关键字 ====================
 // 控制流关键字
 const ControlKeywords = [
-    '如果', '否则', '重复', '循环', '结束', '次', '以上'
+    '如果', '否则', '重复', '循环', '结束', '次', '以上', '选择', '情况'
 ];
 
 // 循环控制关键字
@@ -141,7 +142,7 @@ const AllKeywords = [
 // 词法分析器在识别这些关键字时会检查后继字符，
 // 若后跟标识符字符则不识别为关键字，避免阻断标识符识别
 const ReservedKeywords = [
-    '定义', '个', '长度', '功能', '方法', '全新', '就', '一直', '执行',
+    '类', '项', '定义', '个', '长度', '功能', '方法', '全新', '就', '一直', '执行',
     '增加', '追加', '去除', '包含', '为', '则', '和', '与', '或', '用', '以',
     '可', '使', '让', '被', '把', '将', '给', '向', '从', '在', '上', '下',
     '左', '右', '前', '后', '中', '内', '外', '间', '时', '的话', '而已',
@@ -152,9 +153,12 @@ const ReservedKeywords = [
 const Operators = ['+', '-', '*', '/', '%', '=', '<', '>', '!', '&', '|', '^', '~'];
 
 // ==================== 标点符号 ====================
-const Punctuations = ['。', '，', '、', '：', '；', '？', '《', '》', '—', '！'];
+const Punctuations = ['。', '，', '、', '：', '；', '？', '—', '！'];
 const LeftParen = '（';
 const RightParen = '）';
+// 数组字面量方括号（《》），与字符串分隔符【】区分
+const LeftArrayBracket = '《';
+const RightArrayBracket = '》';
 
 // ==================== 字符分类辅助 ====================
 function isWhitespace(char) {
@@ -198,6 +202,8 @@ module.exports = {
     Punctuations,
     LeftParen,
     RightParen,
+    LeftArrayBracket,
+    RightArrayBracket,
     isWhitespace,
     isDigit,
     isIdentifierStart,

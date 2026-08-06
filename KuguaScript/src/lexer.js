@@ -68,7 +68,8 @@ class Lexer {
             }
 
             // 括号
-            if (current === C.LeftParen || current === C.RightParen) {
+            if (current === C.LeftParen || current === C.RightParen
+                || current === C.LeftArrayBracket || current === C.RightArrayBracket) {
                 this.tokens.push(createToken(C.TokenType.PAREN, current, this.line, this.column));
                 this.advance();
                 continue;
@@ -249,13 +250,20 @@ class Lexer {
         let matchedLength = 0;
 
         for (const keyword of C.AllKeywords) {
+            // '第' 后跟数字或左括号才是数组索引关键字（第2项、第（i+1）项）；后跟汉字则并入标识符（第一个子节点）
+            if (keyword === '第') {
+                const nxt = this.source[this.position + keyword.length];
+                if (!(nxt && (C.isDigit(nxt) || nxt === C.LeftParen))) continue;
+            }
             if (this.source.startsWith(keyword, this.position)) {
                 // 保留关键字（未实际使用）在后面紧跟标识符字符时不识别为关键字
                 // 这样 "追加子节点" 不会被拆成 "追加" + "子节点"
                 // 真正使用的关键字（在 ReservedKeywords 之外的）始终识别
                 if (C.ReservedKeywords.includes(keyword)) {
                     const nextChar = this.source[this.position + keyword.length];
-                    if (nextChar && C.isIdentifierPart(nextChar)) continue;
+                    // 后跟标识符字符时并入标识符（如 类名），但成员访问符"之"/"的"除外
+                    // （如 第2项的 / 第2项之，项 应作为独立关键字，因为"之""的"会终止标识符）
+                    if (nextChar && C.isIdentifierPart(nextChar) && nextChar !== '之' && nextChar !== '的') continue;
                 }
                 if (keyword.length > matchedLength) {
                     matchedKeyword = keyword;
@@ -290,9 +298,23 @@ class Lexer {
                 if (keyword === '之' || keyword === '的') continue;
                 if (this.source.startsWith(keyword, this.position)) {
                     let isComplete = true;
-                    if (C.ReservedKeywords.includes(keyword)) {
+                    if (keyword === '第') {
+                        // '第' 后跟数字或左括号 → 数组索引关键字（第2项、第（i+1）项）
+                        // 后跟其它字符 → 并入标识符（第一个子节点、第三次）
+                        const nxt = this.source[this.position + keyword.length];
+                        if (nxt && (C.isDigit(nxt) || nxt === C.LeftParen)) {
+                            isComplete = true;
+                        } else {
+                            isComplete = false;
+                        }
+                    } else if (C.ReservedKeywords.includes(keyword)) {
                         const nextChar = this.source[this.position + keyword.length];
-                        if (nextChar && C.isIdentifierPart(nextChar)) {
+                        // 已读取标识符字符时，保留关键字并入标识符（如 血条外、日志外框）
+                        // 未读取字符时，仅当后跟标识符字符才并入（如 类名），否则作为独立关键字（如 类：…）
+                        // 成员访问符"之""的"除外（如 第2项之，项 应作为独立关键字）
+                        if (value.length > 0) {
+                            isComplete = false;
+                        } else if (nextChar && C.isIdentifierPart(nextChar) && nextChar !== '之' && nextChar !== '的') {
                             isComplete = false;
                         }
                     } else if (value.length > 0) {

@@ -57,7 +57,7 @@ const cAggregator = `const C = {
     BooleanKeywords,
     NullKeywords, IfAliases, ReturnAliases, AllKeywords, ReservedKeywords,
     Operators, Punctuations, LeftParen, RightParen, isWhitespace, isDigit,
-    isIdentifierStart, isIdentifierPart
+    isIdentifierStart, isIdentifierPart, LeftArrayBracket, RightArrayBracket
 };`;
 
 const astAggregator = `const AST = {
@@ -66,7 +66,8 @@ const astAggregator = `const AST = {
     createBreakStatement, createFunctionDeclaration, createClassDeclaration, createClassProperty,
     createExpressionStatement, createAssignmentExpression, createLogicalExpression,
     createBinaryExpression, createUnaryExpression, createCallExpression, createMemberExpression,
-    createIdentifier, createLiteral, createVariableDeclaration, createUpdateExpression
+    createIdentifier, createLiteral, createVariableDeclaration, createUpdateExpression,
+    createArrayExpression
 };`;
 
 let output = '// 苦瓜脚本语言编译器 - 浏览器版本（自动生成，请勿手动编辑）\n';
@@ -82,9 +83,9 @@ for (const f of files) {
         continue;
     }
 
-    // 移除 require 行（普通形式和解构形式）
-    content = content.replace(/const\s+\w+\s*=\s*require\([^)]+\);\n/g, '');
-    content = content.replace(/const\s+\{[^}]+\}\s*=\s*require\([^)]+\);\n/g, '');
+    // 移除 require 行（普通形式和解构形式），兼容 LF/CRLF 行尾
+    content = content.replace(/const\s+\w+\s*=\s*require\([^)]+\);\r?\n/g, '');
+    content = content.replace(/const\s+\{[^}]+\}\s*=\s*require\([^)]+\);\r?\n/g, '');
     // 移除 module.exports（对象形式和直接形式）
     content = content.replace(/module\.exports\s*=\s*[^;]+;/g, '');
 

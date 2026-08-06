@@ -10,6 +10,8 @@ class Parser {
     constructor(tokens) {
         this.tokens = tokens;
         this.position = 0;
+        // 数组字面量嵌套深度，用于区分《》内分隔符"、"与逻辑与运算符
+        this.arrayDepth = 0;
 
         // 语句解析注册表：关键字 → 解析方法名
         // 添加新语句类型时，只需在此注册即可
@@ -26,6 +28,7 @@ class Parser {
             [C.ReturnAliases.join(',')]: 'parseReturnStatement',
             '说': 'parsePrintStatement',
             '结束': 'parseBreakStatement',
+            '选择': 'parseSwitchStatement',
             '类': 'parseClassStatement'
         };
 
@@ -79,6 +82,11 @@ class Parser {
         return null;
     }
 
+    check(type, value) {
+        const token = this.peek();
+        return token.type === type && (!value || token.value === value);
+    }
+
     expect(type, value, message) {
         const token = this.peek();
         if (token.type === type && (!value || token.value === value)) {
@@ -87,10 +95,33 @@ class Parser {
         throw new Error(`${message} 在第 ${token.line} 行，第 ${token.column} 列`);
     }
 
+    /**
+     * 消费可选的句末符号：句号（。）或行末逗号（，）
+     * 句号仅为句末提示符，可省略；行末逗号同样可作为语句结束符
+     * 同一行内的逗号保留给表达式解析器作为逻辑或（OR）
+     */
+    consumeOptionalPeriodOrComma() {
+        this.match(C.TokenType.PUNCTUATION, '。');
+        const comma = this.peek();
+        if (comma.type === C.TokenType.PUNCTUATION && comma.value === '，') {
+            const next = this.peekNext();
+            // 仅当逗号后是换行（或文件结束）时视为语句结束符
+            if (next.type === C.TokenType.EOF || next.line > comma.line) {
+                this.advance();
+            }
+        }
+    }
+
     // ==================== 语句分发 ====================
 
     parseStatement() {
         const token = this.peek();
+
+        // 空语句：孤立的句号（仅为句末提示符，无实际内容）
+        if (token.type === C.TokenType.PUNCTUATION && token.value === '。') {
+            this.advance();
+            return null;
+        }
 
         // 通过注册表查找语句处理器
         if (token.type === C.TokenType.KEYWORD && this.statementHandlers[token.value]) {
@@ -119,9 +150,26 @@ class Parser {
             const t = this.tokens[pos];
             if (t.type === C.TokenType.KEYWORD && (t.value === '之' || t.value === '的')) {
                 pos++;
+                // 之第X项 → 索引访问，跳过"之"交给下方"第"分支处理
+                const n = this.tokens[pos];
+                if (n && n.type === C.TokenType.KEYWORD && n.value === '第') {
+                    continue;
+                }
                 if (pos < this.tokens.length &&
                     (this.tokens[pos].type === C.TokenType.IDENTIFIER ||
                      this.tokens[pos].type === C.TokenType.KEYWORD)) {
+                    pos++;
+                } else {
+                    return false;
+                }
+            } else if (t.type === C.TokenType.KEYWORD && t.value === '第') {
+                // 之/的第X项索引访问：跳过 第 + 索引 + 项
+                pos++;
+                while (pos < this.tokens.length && this.tokens[pos].type !== C.TokenType.KEYWORD &&
+                       this.tokens[pos].value !== '项') {
+                    pos++;
+                }
+                if (pos < this.tokens.length && this.tokens[pos].value === '项') {
                     pos++;
                 } else {
                     return false;
@@ -137,53 +185,107 @@ class Parser {
 
     // ==================== 语句解析 ====================
 
+    /**
+     * 消费分支分隔符：冒号（：）或逗号（，）
+     * 冒号任意位置均可；逗号通常在行末（换行后进入缩进分支块）
+     */
+    consumeBranchSeparator() {
+        if (this.match(C.TokenType.PUNCTUATION, '：')) return;
+        if (this.match(C.TokenType.PUNCTUATION, '，')) return;
+        const t = this.peek();
+        throw new Error(`期望冒号或逗号 在第 ${t.line} 行，第 ${t.column} 列`);
+    }
+
+    /**
+     * 解析"如果/否则如果"语句头部的条件与分隔符
+     * 条件可用括号包裹（传统写法），也可省略括号；分隔符可为冒号（：）或逗号（，）
+     * 示例：
+     *   如果（成绩 大于等于 90）：
+     *   如果 成绩 大于等于 90：
+     *   如果 成绩 大于等于 90，
+     */
+    parseIfConditionHeader() {
+        let condition;
+        if (this.match(C.TokenType.PAREN, C.LeftParen)) {
+            condition = this.parseExpression();
+            this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
+        } else {
+            condition = this.parseExpression();
+        }
+        this.consumeBranchSeparator();
+        return condition;
+    }
+
     parseIfStatement() {
         const ifToken = this.advance();
-        this.expect(C.TokenType.PAREN, C.LeftParen, '期望左括号');
-        const condition = this.parseExpression();
-        this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
-        this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
-
+        const condition = this.parseIfConditionHeader();
         const consequent = this.parseBlock(ifToken.column);
-
-        let alternate = null;
-        if (this.match(C.TokenType.KEYWORD, '否则')) {
-            this.match(C.TokenType.PUNCTUATION, '，');
-            if (this.match(C.TokenType.KEYWORD, '如果')) {
-                // 否则如果
-                this.expect(C.TokenType.PAREN, C.LeftParen, '期望左括号');
-                const elseIfCondition = this.parseExpression();
-                this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
-                this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
-                const elseIfConsequent = this.parseBlock(ifToken.column);
-                alternate = AST.createIfStatement(elseIfCondition, elseIfConsequent, this.parseElseBlock(ifToken.column));
-            } else {
-                // 否则
-                this.match(C.TokenType.PUNCTUATION, '，');
-                this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
-                alternate = this.parseBlock(ifToken.column);
-            }
-        }
-
+        const alternate = this.parseElseBlock(ifToken.column);
         return AST.createIfStatement(condition, consequent, alternate);
     }
 
+    /**
+     * 解析"否则"分支（含"否则如果"链）
+     * 支持：否则：／否则，／否则如果（条件）：／否则如果 条件，／否则，如果 条件：
+     */
     parseElseBlock(parentIndent) {
-        if (this.match(C.TokenType.KEYWORD, '否则')) {
-            this.match(C.TokenType.PUNCTUATION, '，');
-            if (this.match(C.TokenType.KEYWORD, '如果')) {
-                this.expect(C.TokenType.PAREN, C.LeftParen, '期望左括号');
-                const condition = this.parseExpression();
-                this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
-                this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
-                const consequent = this.parseBlock(parentIndent);
-                return AST.createIfStatement(condition, consequent, this.parseElseBlock(parentIndent));
-            } else {
-                this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
-                return this.parseBlock(parentIndent);
+        if (!this.match(C.TokenType.KEYWORD, '否则')) return null;
+
+        // 允许"否则，如果"与"否则如果"两种写法
+        this.match(C.TokenType.PUNCTUATION, '，');
+
+        if (this.match(C.TokenType.KEYWORD, '如果')) {
+            const condition = this.parseIfConditionHeader();
+            const consequent = this.parseBlock(parentIndent);
+            return AST.createIfStatement(condition, consequent, this.parseElseBlock(parentIndent));
+        }
+
+        // 否则：或否则， 均可进入分支
+        if (!this.match(C.TokenType.PUNCTUATION, '：')) {
+            const prev = this.previous();
+            if (!prev || prev.value !== '，') {
+                const t = this.peek();
+                throw new Error(`期望冒号或逗号 在第 ${t.line} 行，第 ${t.column} 列`);
             }
         }
-        return null;
+        return this.parseBlock(parentIndent);
+    }
+
+    parseSwitchStatement() {
+        const token = this.advance(); // 选择
+        this.expect(C.TokenType.PAREN, C.LeftParen, '期望左括号');
+        const argument = this.parseExpression();
+        this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
+        this.consumeBranchSeparator();
+
+        const cases = [];
+        let alternate = null;
+
+        while (!this.isAtEnd()) {
+            const t = this.peek();
+            if (t.type === C.TokenType.KEYWORD && t.value === '情况') {
+                this.advance();
+                const test = this.parseExpression();
+                this.consumeBranchSeparator();
+                const body = this.parseBlock(token.column);
+                cases.push({ test, body });
+            } else if (t.type === C.TokenType.KEYWORD && t.value === '否则') {
+                this.advance();
+                this.consumeBranchSeparator();
+                alternate = this.parseBlock(token.column);
+                break; // 否则 是最后一个分支
+            } else {
+                break;
+            }
+        }
+
+        // 从最后一个 case 往前构建 if / else-if / else 链
+        let node = alternate;
+        for (let i = cases.length - 1; i >= 0; i--) {
+            const test = AST.createBinaryExpression('===', argument, cases[i].test);
+            node = AST.createIfStatement(test, cases[i].body, node);
+        }
+        return node;
     }
 
     parseRepeatStatement() {
@@ -217,7 +319,7 @@ class Parser {
         }
 
         this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
-        this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
+        this.consumeBranchSeparator();
 
         const body = this.parseBlock(repeatToken.column);
         return AST.createForStatement(init, condition, update, body);
@@ -271,7 +373,7 @@ class Parser {
         this.expect(C.TokenType.PAREN, C.LeftParen, '期望左括号');
         const paramToken = this.expect(C.TokenType.IDENTIFIER, null, '期望参数名');
         this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
-        this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
+        this.consumeBranchSeparator();
 
         const body = this.parseBlock(loopToken.column);
         return AST.createForOfStatement(
@@ -283,21 +385,27 @@ class Parser {
 
     parseReturnStatement() {
         this.advance();
+        // 支持无返回值（结果是。／结果是；／行末结果是，）
+        if (this.check(C.TokenType.PUNCTUATION, '。') || this.check(C.TokenType.PUNCTUATION, '；')
+            || (this.check(C.TokenType.PUNCTUATION, '，') && this.peekNext().line > this.peek().line)) {
+            this.consumeOptionalPeriodOrComma();
+            return AST.createReturnStatement(null);
+        }
         const argument = this.parseExpression();
-        this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+        this.consumeOptionalPeriodOrComma();
         return AST.createReturnStatement(argument);
     }
 
     parsePrintStatement() {
         this.advance();
         const argument = this.parseExpression();
-        this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+        this.consumeOptionalPeriodOrComma();
         return AST.createPrintStatement(argument);
     }
 
     parseBreakStatement() {
         this.advance();
-        this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+        this.consumeOptionalPeriodOrComma();
         return AST.createBreakStatement();
     }
 
@@ -315,17 +423,9 @@ class Parser {
         const id = this.advance();
         let target = AST.createIdentifier(id.value);
 
-        // 处理成员访问链：敌人之生命
+        // 处理成员访问链与索引访问：敌人之生命、数组之第3项
         // 允许关键字作为属性名
-        while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
-            const next = this.peek();
-            if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
-                this.advance();
-                target = AST.createMemberExpression(target, AST.createIdentifier(next.value), false);
-            } else {
-                throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
-            }
-        }
+        target = this.parsePostfix(target);
 
         this.expect(C.TokenType.PUNCTUATION, '：', '期望冒号');
 
@@ -349,7 +449,7 @@ class Parser {
 
         // 变量赋值或成员赋值（用 ExpressionStatement 包装以生成分号）
         const value = this.parseExpression();
-        this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+        this.consumeOptionalPeriodOrComma();
         return AST.createExpressionStatement(AST.createAssignmentExpression(target, value));
     }
 
@@ -391,7 +491,7 @@ class Parser {
 
         // 可选的"以上。"结束标记
         if (this.match(C.TokenType.KEYWORD, '以上')) {
-            this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+            this.consumeOptionalPeriodOrComma();
         }
 
         return AST.createBlockStatement(body);
@@ -410,6 +510,15 @@ class Parser {
                 const id = this.advance();
                 this.advance(); // 冒号
 
+                // 嵌套类：冒号后是"标识符："（如 史莱姆：\n名字：…），而非属性值
+                const after = this.peek();
+                const afterNext = this.peekNext();
+                if (after.type === C.TokenType.IDENTIFIER && afterNext.value === '：') {
+                    const nestedBody = this.parseClassBody(id.column);
+                    body.push(AST.createClassDeclaration(id.value, nestedBody));
+                    continue;
+                }
+
                 if (this.match(C.TokenType.KEYWORD, '输入')) {
                     // 方法定义
                     const params = this.parseFunctionParams();
@@ -419,7 +528,7 @@ class Parser {
                 } else {
                     // 属性定义
                     const value = this.parseExpression();
-                    this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+                    this.consumeOptionalPeriodOrComma();
                     body.push(AST.createClassProperty(id.value, value));
                 }
             } else {
@@ -437,12 +546,12 @@ class Parser {
      */
     isBlockTerminator(token) {
         return token.type === C.TokenType.KEYWORD
-            && (token.value === '否则' || token.value === '以上');
+            && (token.value === '否则' || token.value === '以上' || token.value === '情况');
     }
 
     parseExpressionStatement() {
         const expression = this.parseExpression();
-        this.expect(C.TokenType.PUNCTUATION, '。', '期望句号');
+        this.consumeOptionalPeriodOrComma();
         return AST.createExpressionStatement(expression);
     }
 
@@ -454,16 +563,31 @@ class Parser {
 
     parseLogicalOr() {
         let left = this.parseLogicalAnd();
-        while (this.match(C.TokenType.KEYWORD, '或者') || this.match(C.TokenType.PUNCTUATION, '，')) {
-            const right = this.parseLogicalAnd();
-            left = AST.createLogicalExpression('||', left, right);
+        while (true) {
+            if (this.match(C.TokenType.KEYWORD, '或者')) {
+                const right = this.parseLogicalAnd();
+                left = AST.createLogicalExpression('||', left, right);
+                continue;
+            }
+            // 逗号（，）默认作为逻辑或；但行末逗号（其后紧跟换行）视为语句/分支分隔符
+            // 例如：如果 数 小于 5，<换行>说（…）。—— 逗号结束条件并进入分支
+            const comma = this.peek();
+            if (comma.type === C.TokenType.PUNCTUATION && comma.value === '，'
+                && this.peekNext().line === comma.line) {
+                this.advance();
+                const right = this.parseLogicalAnd();
+                left = AST.createLogicalExpression('||', left, right);
+                continue;
+            }
+            break;
         }
         return left;
     }
 
     parseLogicalAnd() {
         let left = this.parseEquality();
-        while (this.match(C.TokenType.KEYWORD, '并且') || this.match(C.TokenType.PUNCTUATION, '、')) {
+        // 数组字面量《》内的"、"是元素分隔符，不作为逻辑与运算符
+        while (!this.arrayDepth && (this.match(C.TokenType.KEYWORD, '并且') || this.match(C.TokenType.PUNCTUATION, '、'))) {
             const right = this.parseEquality();
             left = AST.createLogicalExpression('&&', left, right);
         }
@@ -565,25 +689,45 @@ class Parser {
     }
 
     parseMember() {
-        let object = this.parsePrimary();
+        return this.parsePostfix(this.parsePrimary());
+    }
 
-        // 之/的 成员访问
-        // 允许关键字作为属性名（如"追加"、"包含"等保留字）
-        while (this.match(C.TokenType.KEYWORD, '之') || this.match(C.TokenType.KEYWORD, '的')) {
-            const next = this.peek();
-            if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
-                this.advance();
-                object = AST.createMemberExpression(object, AST.createIdentifier(next.value), false);
-            } else {
-                throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
+    /**
+     * 后缀表达式：成员访问（之/的）与索引访问（第...项）
+     * 供 parseMember 与赋值目标解析共用
+     */
+    parsePostfix(object) {
+        while (true) {
+            const op = this.peek();
+            // 之/的 成员访问
+            // 允许关键字作为属性名（如"追加"、"包含"等保留字）
+            if (op.type === C.TokenType.KEYWORD && (op.value === '之' || op.value === '的')) {
+                const next = this.peekNext();
+                // 的/之 + 第...项 → 索引访问（如 孩子列表的第3项），跳过操作符交给下方索引解析
+                if (next.type === C.TokenType.KEYWORD && next.value === '第') {
+                    this.advance();
+                    continue;
+                }
+                if (next.type === C.TokenType.IDENTIFIER || next.type === C.TokenType.KEYWORD) {
+                    this.advance();
+                    this.advance();
+                    object = AST.createMemberExpression(object, AST.createIdentifier(this.previous().value), false);
+                } else {
+                    throw new Error(`期望属性名 在第 ${next.line} 行，第 ${next.column} 列`);
+                }
+                continue;
             }
-        }
 
-        // 第...项 索引访问
-        while (this.match(C.TokenType.KEYWORD, '第')) {
-            const index = this.parseExpression();
-            this.expect(C.TokenType.KEYWORD, '项', '期望"项"');
-            object = AST.createMemberExpression(object, index, true);
+            // 第...项 索引访问
+            if (op.type === C.TokenType.KEYWORD && op.value === '第') {
+                this.advance();
+                const index = this.parseExpression();
+                this.expect(C.TokenType.KEYWORD, '项', '期望"项"');
+                object = AST.createMemberExpression(object, index, true);
+                continue;
+            }
+
+            break;
         }
 
         return object;
@@ -609,6 +753,21 @@ class Parser {
             const expression = this.parseExpression();
             this.expect(C.TokenType.PAREN, C.RightParen, '期望右括号');
             return expression;
+        }
+        // 数组字面量：《元素1、元素2、…》
+        if (this.match(C.TokenType.PAREN, C.LeftArrayBracket)) {
+            this.arrayDepth++;
+            const elements = [];
+            if (!this.check(C.TokenType.PAREN, C.RightArrayBracket)) {
+                elements.push(this.parseExpression());
+                while (this.match(C.TokenType.PUNCTUATION, '、')) {
+                    if (this.check(C.TokenType.PAREN, C.RightArrayBracket)) break; // 允许尾随分隔符
+                    elements.push(this.parseExpression());
+                }
+            }
+            this.arrayDepth--;
+            this.expect(C.TokenType.PAREN, C.RightArrayBracket, '期望右方括号');
+            return AST.createArrayExpression(elements);
         }
 
         const token = this.peek();
