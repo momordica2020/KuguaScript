@@ -1,0 +1,110 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "苦瓜脚本",
+  "scopeName": "source.kugua",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#nulls" },
+    { "include": "#keywords" },
+    { "include": "#memberAccess" },
+    { "include": "#indexAccess" },
+    { "include": "#functions" },
+    { "include": "#identifiers" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.kugua",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.kugua",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.kugua",
+          "begin": "“",
+          "end": "”"
+        }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.kugua",
+      "match": "(?<![0-9.])([零一二三四五六七八九十百千万两]+|\\d+\\.\\d+|\\d+)(?![0-9.])"
+    },
+    "booleans": {
+      "name": "constant.language.boolean.kugua",
+      "match": "(?:正确|错误|真|对|错|不对|假)(?:(?![\\u4e00-\\u9fffA-Za-z0-9_])|(?=的))"
+    },
+    "nulls": {
+      "name": "constant.language.null.kugua",
+      "match": "(?:空|没了)(?:(?![\\u4e00-\\u9fffA-Za-z0-9_])|(?=的))"
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.kugua",
+          "match": "(?:开始于|否则如果|否则|如果|重复|循环|结束|返回|结果是|输入|说|定义|类|功能|方法|全新|选择|情况|从|到|为止|每次|次|以上|就|一直|执行|尝试|如果报错|假如报错|要是报错|引入|导出|作为|称作|当|直到|遍历|等待|设|设为|减少|每个|此|本|不在|先|再|然后|最后|如下|缺省|每当|的话)"
+        },
+        {
+          "name": "keyword.operator.kugua",
+          "match": "(?:小于等于|大于等于|不大于|不小于|等价于|不是|不等于|并且|而且|以及|或者|或是|并非|包含|小于|大于|等于|是|且|和|与|或|非|增加)"
+        },
+        {
+          "name": "keyword.operator.kugua",
+          "match": "[+\\-*/%=<>!&|^~]"
+        }
+      ]
+    },
+    "memberAccess": {
+      "name": "punctuation.accessor.kugua",
+      "match": "[之的]"
+    },
+    "indexAccess": {
+      "name": "keyword.other.kugua",
+      "match": "[第项]"
+    },
+    "functions": {
+      "match": "((?:(?!(?:小于等于|大于等于|不大于|不小于|等价于|不是|不等于|并且|而且|以及|或者|或是|并非|包含|开始于|否则如果|否则|如果|重复|循环|结束|返回|结果是|输入|说|定义|类|功能|方法|全新|选择|情况|从|到|为止|每次|次|以上|就|一直|执行|尝试|如果报错|假如报错|要是报错|引入|导出|作为|称作|当|直到|遍历|等待|设|设为|减少|每个|此|本|不在|先|再|然后|最后|如下|缺省|每当|的话|增加|小于|大于|等于|是|且|和|与|或|非|之|的|第|项))[\\u4e00-\\u9fffA-Za-z0-9_])+)(?=\\s*（)",
+      "captures": {
+        "1": {
+          "name": "entity.name.function.kugua"
+        }
+      }
+    },
+    "identifiers": {
+      "name": "variable.other.kugua",
+      "match": "(?:(?!(?:小于等于|大于等于|不大于|不小于|等价于|不是|不等于|并且|而且|以及|或者|或是|并非|包含|开始于|否则如果|否则|如果|重复|循环|结束|返回|结果是|输入|说|定义|类|功能|方法|全新|选择|情况|从|到|为止|每次|次|以上|就|一直|执行|尝试|如果报错|假如报错|要是报错|引入|导出|作为|称作|当|直到|遍历|等待|设|设为|减少|每个|此|本|不在|先|再|然后|最后|如下|缺省|每当|的话|增加|小于|大于|等于|是|且|和|与|或|非|之|的|第|项))[\\u4e00-\\u9fffA-Za-z0-9_])+"
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.kugua",
+          "match": "[。]"
+        },
+        {
+          "name": "punctuation.separator.kugua",
+          "match": "[，、；：？！…—]"
+        },
+        {
+          "name": "punctuation.section.group.kugua",
+          "match": "[（）]"
+        },
+        {
+          "name": "punctuation.section.array.kugua",
+          "match": "[【】]"
+        }
+      ]
+    }
+  }
+}

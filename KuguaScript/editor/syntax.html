@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>苦瓜脚本语言 - 语法规则</title>
+    <title>苦瓜脚本语言 - 语法指南</title>
     <style>
         * {
             margin: 0;
@@ -149,92 +149,90 @@
 <body>
     <div class="container">
         <a href="index.html" class="back-link">← 返回编辑器</a>
-        <h1>苦瓜脚本语言 语法规则</h1>
+        <h1>苦瓜脚本语言 语法指南</h1>
 
         <div class="section">
-            <h2>一、基本结构</h2>
-            <p>苦瓜脚本语言使用全角中文标点作为语句分隔符：句号（。）结束一条语句（可省略），冒号（：）用于定义，分号（；）用于函数定义后。</p>
-            <div class="code-block">变量名：值。</div>
-            <div class="note">语句通常以句号（。）结尾，句号可省略；函数定义以分号（；）结尾后接函数体。</div>
+            <h2>一、快速上手</h2>
+            <div class="code-block">说（“你好，世界！”）。</div>
+            <p>运行方式：</p>
+            <div class="code-block">node cli.js 脚本.ks        # 直接运行
+node cli.js 脚本.ks --compile  # 只看编译后的 JavaScript</div>
+            <p>教程代码见 <code>test/01_起步.ks</code> 至 <code>test/13_实战_勇者的试炼.ks</code>，由浅入深覆盖全部功能。</p>
         </div>
 
         <div class="section">
-            <h2>二、变量定义</h2>
-            <p>使用冒号（：）进行变量定义和赋值。</p>
-            <div class="code-block">数：42。
-字符串：“你好”。
-小数：3.14。</div>
-            <h3>数据类型</h3>
+            <h2>二、基本结构</h2>
+            <p>语句通常以句号（<span class="punctuation">。</span>）结尾，可省略；冒号（<span class="punctuation">：</span>）用于定义；代码块通过缩进区分（子语句缩进必须大于父语句）。</p>
+            <div class="code-block">变量名：值。
+如果 条件：
+    说（“缩进大于父级即可”）。</div>
+            <h3>注释</h3>
+            <div class="code-block">// 单行注释
+/* 多行
+   注释 */</div>
+            <h3>同一行多条语句</h3>
+            <div class="code-block">a：1，b：2。
+a：3，说（a）。</div>
+        </div>
+
+        <div class="section">
+            <h2>三、字面量与变量</h2>
             <table>
                 <tr><th>类型</th><th>示例</th><th>说明</th></tr>
                 <tr><td>整数</td><td><code>42</code></td><td>普通整数</td></tr>
                 <tr><td>小数</td><td><code>3.14</code></td><td>浮点数</td></tr>
-                <tr><td>字符串</td><td><code>“你好”</code></td><td>用中文引号括起</td></tr>
-                <tr><td>布尔值</td><td><code>正确</code> / <code>错误</code></td><td>也可用：真/假、对/错</td></tr>
-                <tr><td>空值</td><td><code>空</code></td><td>等同于 null</td></tr>
+                <tr><td>字符串</td><td><code>“你好”</code></td><td>中文引号括起，拼接用 <code>+</code>，换行 <code>\n</code>，引号内转义 <code>\“</code></td></tr>
+                <tr><td>布尔</td><td><code>正确</code> / <code>错误</code></td><td>也可写 真/对、假/错</td></tr>
+                <tr><td>空值</td><td><code>空</code></td><td>等于 null</td></tr>
             </table>
-        </div>
-
-        <div class="section">
-            <h2>三、输出</h2>
-            <p>使用<span class="keyword">说</span>关键字输出内容，等同于 console.log。</p>
-            <div class="code-block">说（“你好，世界！”）。
-说（42）。
-说（变量）。</div>
+            <h3>变量定义</h3>
+            <div class="code-block">数：42。
+字符串：“你好”。
+布尔：正确。
+数 是 100。          // “是”也可作赋值号（成员赋值尤其好用）</div>
+            <h3>把/设字句（赋值语法糖）</h3>
+            <div class="code-block">把 分 增加 5。         // 分 += 5
+把 分 减少 2。         // 分 -= 2
+设 分 为 100。         // 分 = 100
+将 分 设为 50。        // 分 = 50
+把 勇者之生命 减少 30。</div>
+            <h3>"的"语缀</h3>
+            <div class="note">词尾的"的"是无实义语缀，不影响取值：<code>正确的</code> 等于 <code>正确</code>，<code>空的</code> 等于 <code>空</code>。高亮时语缀按标点灰显。</div>
         </div>
 
         <div class="section">
             <h2>四、运算符</h2>
-            <h3>算术运算</h3>
+            <h3>算术</h3>
+            <div class="code-block">1 + 2   10 - 3   4 * 5   20 / 4   10 % 3</div>
+            <h3>比较</h3>
             <table>
-                <tr><th>运算</th><th>符号</th><th>示例</th></tr>
-                <tr><td>加法</td><td><code>+</code></td><td><code>1 + 2</code></td></tr>
-                <tr><td>减法</td><td><code>-</code></td><td><code>10 - 3</code></td></tr>
-                <tr><td>乘法</td><td><code>*</code></td><td><code>4 * 5</code></td></tr>
-                <tr><td>除法</td><td><code>/</code></td><td><code>20 / 4</code></td></tr>
-                <tr><td>取余</td><td><code>%</code></td><td><code>10 % 3</code></td></tr>
+                <tr><th>含义</th><th>关键字</th></tr>
+                <tr><td>等于</td><td><code>等于</code> <code>是</code> <code>等价于</code></td></tr>
+                <tr><td>不等于</td><td><code>不是</code> <code>不等于</code></td></tr>
+                <tr><td>小于 / 大于</td><td><code>小于</code> <code>大于</code></td></tr>
+                <tr><td>小于等于 / 大于等于</td><td><code>小于等于</code> <code>大于等于</code>（或 <code>不大于</code> / <code>不小于</code>）</td></tr>
+                <tr><td>包含</td><td><code>X 包含 Y</code> → <code>X.includes(Y)</code></td></tr>
+                <tr><td>成员判断</td><td><code>X 在 Y 中</code> → <code>Y.includes(X)</code>；<code>X 不在 Y 中</code> 为取反</td></tr>
             </table>
-            <h3>比较运算</h3>
-            <table>
-                <tr><th>含义</th><th>关键字</th><th>示例</th></tr>
-                <tr><td>小于</td><td><code>小于</code></td><td><code>1 小于 2</code></td></tr>
-                <tr><td>大于</td><td><code>大于</code></td><td><code>2 大于 1</code></td></tr>
-                <tr><td>等于</td><td><code>等于</code> / <code>是</code></td><td><code>1 等于 1</code></td></tr>
-                <tr><td>不等于</td><td><code>不是</code></td><td><code>1 不是 2</code></td></tr>
-                <tr><td>小于等于</td><td><code>小于等于</code> / <code>不大于</code></td><td><code>1 小于等于 1</code></td></tr>
-                <tr><td>大于等于</td><td><code>大于等于</code> / <code>不小于</code></td><td><code>1 大于等于 1</code></td></tr>
-            </table>
-            <h3>逻辑运算</h3>
-            <table>
-                <tr><th>含义</th><th>关键字</th><th>示例</th></tr>
-                <tr><td>与（AND）</td><td><code>并且</code> / 顿号<code>、</code></td><td><code>正确 并且 正确</code></td></tr>
-                <tr><td>或（OR）</td><td><code>或者</code> / 同行逗号<code>，</code></td><td><code>正确 或者 错误</code></td></tr>
-                <tr><td>非（NOT）</td><td><code>非</code></td><td><code>非 正确</code></td></tr>
-            </table>
+            <h3>逻辑</h3>
+            <div class="code-block">正确 并且 正确    // 与：并且/而且/且/以及
+正确 或者 错误    // 或：或者/或是/或
+非 正确            // 非：非/并非/不是</div>
         </div>
 
         <div class="section">
-            <h2>五、条件语句</h2>
-            <p>使用<span class="keyword">如果</span>、<span class="keyword">否则如果</span>、<span class="keyword">否则</span>进行条件判断。条件的括号可以省略，分支分隔符既可以用冒号（：）也可以用逗号（，）。</p>
-            <h3>写法一：括号 + 冒号（传统写法）</h3>
-            <div class="code-block">如果（成绩 大于等于 90）：
+            <h2>五、条件判断</h2>
+            <div class="code-block">如果（成绩 大于等于 90）：      // 括号可省略
     说（“优秀”）。
-否则如果（成绩 大于等于 60）：
+否则如果 成绩 大于等于 60，
     说（“及格”）。
 否则：
     说（“不及格”）。</div>
-            <h3>写法二：省略括号</h3>
-            <div class="code-block">如果 成绩 大于等于 90：
-    说（“优秀”）。
-否则如果 成绩 大于等于 60，
-    说（“及格”）。</div>
-            <h3>写法三：逗号结尾进入分支</h3>
-            <div class="code-block">如果 成绩 大于等于 90，
-    说（“优秀”）。
-否则，
-    说（“不及格”）。</div>
-            <h3>选择语句（按值匹配）</h3>
-            <p>使用<span class="keyword">选择</span>按值匹配分支，<span class="keyword">情况</span>定义匹配分支，<span class="keyword">否则</span>为默认分支，分隔符同样支持冒号或逗号。</p>
+            <p>分支分隔符支持冒号（<span class="punctuation">：</span>）或行末逗号（<span class="punctuation">，</span>）；也支持行内写法与口语后缀"的话"：</p>
+            <div class="code-block">如果 1 是 1：说（“一行搞定”），否则：说（“不会执行”）。
+如果 天气 是 “雨” 的话：
+    说（“带伞”）。</div>
+            <h3>选择（按值匹配）</h3>
             <div class="code-block">选择（等级）：
     情况 1，
         说（“一级”）。
@@ -242,80 +240,189 @@
         说（“二级”）。
     否则：
         说（“其他”）。</div>
-            <div class="note">逗号（，）在同一行内仍表示逻辑或（OR）；作为分支分隔符时通常位于行末，换行后跟缩进的分支块。代码块通过缩进区分，子语句的缩进必须大于父语句。</div>
         </div>
 
         <div class="section">
-            <h2>六、循环语句</h2>
-            <h3>重复循环（for 循环）</h3>
-            <p>使用<span class="keyword">重复</span>关键字，语法：重复（开始于 变量=初值，到 条件 为止，每次 变量++）：</p>
+            <h2>六、循环</h2>
+            <h3>重复（for）</h3>
             <div class="code-block">重复（开始于i=0，到i小于5为止，每次i++）：
     说（i）。</div>
-            <h3>循环次数（repeat-n）</h3>
-            <p>使用<span class="keyword">循环</span>关键字，语法：循环 N 次（变量）：</p>
-            <div class="code-block">循环 3 次（i）：
-    说（i）。</div>
+            <h3>循环 N 次</h3>
+            <div class="code-block">循环 3 次（序号）：
+    说（序号）。</div>
+            <h3>当…时（while）</h3>
+            <div class="code-block">当 运行 时：
+    走（）。</div>
+            <h3>重复 直到…为止（do-while，至少执行一次，条件满足后停止）</h3>
+            <div class="code-block">重复 直到 分数 大于 100 为止：
+    分数：分数 + 1。</div>
+            <h3>每当…就</h3>
+            <div class="code-block">每当 n 小于 3，就 把 n 增加 1。
+每当 m 小于 3：            // 也支持缩进块
+    m：m+1。</div>
+            <h3>遍历（for-of）</h3>
+            <div class="code-block">遍历 名单 中 的 每个 元素：
+    说（元素）。</div>
+            <p><span class="keyword">结束</span> 相当于 break，跳出当前循环。</p>
         </div>
 
         <div class="section">
-            <h2>七、函数定义</h2>
-            <p>使用<span class="keyword">输入</span>关键字声明参数，参数名用中文引号括起，多个参数用顿号（、）分隔。函数体以分号（；）开始。<span class="keyword">结果是</span>用于返回值。</p>
-            <div class="code-block">问候函数：输入“名字”；
-    结果是“你好，” + 名字。
+            <h2>七、函数</h2>
+            <div class="code-block">问候：输入 名字；           // 参数用顿号分隔
+    结果是 “你好，” + 名字。
+说（问候（“小明”））。</div>
+            <h3>默认参数</h3>
+            <div class="code-block">问候：输入 名字 缺省 为 “路人”；
+    结果是 “你好，” + 名字。</div>
+            <h3>无参函数与"如下"函数头</h3>
+            <div class="code-block">当前时间：输入；
+    结果是 日期之now（）。
 
-说（问候函数（“苦瓜”））。</div>
+打招呼 如下：                // 等价于 打招呼：输入；
+    说（“你好”）。</div>
+            <p>函数引用可作为参数传递（回调）：<code>添加事件监听（“click”，处理）</code>。</p>
         </div>
 
         <div class="section">
-            <h2>八、类（对象）定义</h2>
-            <p>类名后接冒号（：），内部通过缩进定义属性和方法。属性以句号（。）结尾，方法以分号（；）结尾。使用<span class="keyword">之</span>访问成员。</p>
-            <div class="code-block">计算器：
-    加法：输入“a”、“b”；
-        结果是a + b。
-    减法：输入“a”、“b”；
-        结果是a - b。
-
-说（计算器之加法（3，5））。</div>
-            <div class="note">类的方法内部暂不支持通过 this 访问类属性，方法只能使用自身参数和外部变量。</div>
+            <h2>八、数组</h2>
+            <div class="code-block">蛇身：【210、209、208】。     // 【】包裹，顿号分隔
+名单：1、2、3、4、5。          // 定义右侧可直接顿号列举
+空表：【】。
+矩阵：【1、2、3】、【4、5、6】。  // 嵌套用【】包裹</div>
+            <h3>索引（1 基）</h3>
+            <div class="code-block">名单第1项。
+名单第i项。          // 变量索引
+名单第一项。         // 中文数字：第一项/第十项/第二十三项
+名单之第3项。</div>
+            <p>中文数字须紧跟在"项"前（<code>第一项</code>），<code>第一个子节点</code> 仍是普通标识符。</p>
+            <h3>列表标准库</h3>
+            <div class="code-block">列表之长度 / 追加 / 移除（1基） / 包含 / 连接 / 排序 / 反转
+列表之映射 / 筛选 / 归并        // 回调函数
+列表之查找（1基，找不到为 0）</div>
         </div>
 
         <div class="section">
-            <h2>九、注释</h2>
-            <p>支持单行注释和多行块注释，语法与 JavaScript 相同。</p>
-            <div class="code-block">// 这是单行注释
-
-/* 这是多行注释
-   可以跨越多行 */</div>
+            <h2>九、文本（字符串）</h2>
+            <div class="code-block">文本之长度 / 拆分 / 替换 / 查找 / 包含
+文本之转大写 / 转小写 / 修剪 / 子串 / 连接</div>
+            <div class="code-block">说（文本之拆分（“a，b，c”，“，”））。
+说（文本之替换（“你好世界”，“世界”，“苦瓜”））。
+说（文本之连接（“春”，“夏”，“秋”））。</div>
         </div>
 
         <div class="section">
-            <h2>十、标点符号速查</h2>
+            <h2>十、类与对象</h2>
+            <div class="code-block">勇者：
+    名字：“勇者”。
+    生命：100。
+    受伤：输入 伤害；
+        此之生命：此之生命 - 伤害。   // 此/本 = this
+        结果是 此之生命。</div>
+            <p>成员访问用 <span class="keyword">之</span> 或 <span class="keyword">的</span>：<code>勇者之生命</code>、<code>勇者的生命</code>；成员赋值 <code>勇者之生命 是 90。</code>；支持方法链 <code>文档之创建元素（“div”）之设置文本（“你好”）。</code></p>
+        </div>
+
+        <div class="section">
+            <h2>十一、错误处理</h2>
+            <div class="code-block">尝试：
+    读取文件（“配置.json”）。
+如果报错（错误信息）：     // 假如报错 / 要是报错 亦可
+    说（“读取失败：” + 错误信息）。</div>
+            <p>也支持行内写法：<code>尝试：读取文件（“a”），如果报错：说（“失败”）。</code> 错误变量可省略。</p>
+        </div>
+
+        <div class="section">
+            <h2>十二、模块与异步</h2>
+            <div class="code-block">引入 “node:path” 作为 路径模块。   // 或 称作
+引入 “os” 称作 系统模块。
+说（路径模块之join（“a”，“b”））。
+
+导出 变量 作为 别名。       // CommonJS module.exports
+
+等待 定时器之setTimeout（1000）。  // await：函数内自动 async，顶层异步运行
+</div>
+            <p><span class="keyword">引入</span> 编译为 <code>require</code>，在 Node.js 与 Vite/esbuild 打包工具中可用；浏览器运行时暂不支持。</p>
+        </div>
+
+        <div class="section">
+            <h2>十三、中文标准库</h2>
+            <table>
+                <tr><th>命名空间</th><th>典型方法</th><th>环境</th></tr>
+                <tr><td><code>路径</code></td><td>拼接、解析、目录名、文件名、扩展名、相对、绝对化、分隔符</td><td>Node</td></tr>
+                <tr><td><code>网址</code></td><td>解析（返回 协议/主机/域名/端口/路径/参数）</td><td>Node</td></tr>
+                <tr><td><code>加密</code></td><td>哈希、随机字节、随机标识</td><td>Node</td></tr>
+                <tr><td><code>文件</code></td><td>读取、写入、追加、删除、存在、列出、复制、移动</td><td>Node</td></tr>
+                <tr><td><code>系统</code></td><td>平台、架构、处理器数量、内存、主机名、临时目录、用户目录</td><td>Node</td></tr>
+                <tr><td><code>环境变量</code></td><td>读取、设置、删除、全部</td><td>Node</td></tr>
+                <tr><td><code>缓冲</code></td><td>从文本、转文本、从十六进制、转十六进制、长度、拼接</td><td>Node</td></tr>
+                <tr><td><code>服务器</code></td><td>创建、监听、关闭；请求之网址/方法/头/读取体，响应之状态/设置头/发送</td><td>Node</td></tr>
+                <tr><td><code>画布</code></td><td>创建；上下文之设置填充色/填充矩形/填充圆/填充文本/清空…</td><td>浏览器</td></tr>
+                <tr><td><code>剪贴板</code></td><td>读取、写入（Promise，配合 等待）</td><td>浏览器</td></tr>
+                <tr><td><code>文本</code></td><td>长度、拆分、替换、查找、包含、转大小写、修剪、子串、连接</td><td>两端</td></tr>
+                <tr><td><code>列表</code></td><td>长度、追加、移除、包含、连接、排序、反转、映射、筛选、归并、查找</td><td>两端</td></tr>
+                <tr><td><code>数学</code></td><td>平方根、乘方、正弦、余弦、正切、最小值、最大值、圆周率</td><td>两端</td></tr>
+                <tr><td><code>日期</code></td><td>现在、年、月、日、时、分、秒、格式化、时间戳</td><td>两端</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>十四、中文句式速查</h2>
+            <table>
+                <tr><th>句式</th><th>示例</th><th>等价于</th></tr>
+                <tr><td>把/将字句</td><td><code>把 分 增加 1。</code></td><td><code>分 += 1</code></td></tr>
+                <tr><td>设字句</td><td><code>设 运行 为 错误。</code></td><td><code>运行 = 错误</code></td></tr>
+                <tr><td>成员判断</td><td><code>“你” 在 名单 中。</code></td><td><code>名单.includes("你")</code></td></tr>
+                <tr><td>遍历</td><td><code>遍历 名单 中 的 每个 元素：</code></td><td><code>for (var 元素 of 名单)</code></td></tr>
+                <tr><td>当…时</td><td><code>当 运行 时：</code></td><td><code>while (运行)</code></td></tr>
+                <tr><td>直到…为止</td><td><code>重复 直到 X 为止：</code></td><td><code>do {…} while (!(X))</code></td></tr>
+                <tr><td>每当…就</td><td><code>每当 n 小于 3，就 把 n 增加 1。</code></td><td><code>while (n &lt; 3) { n += 1 }</code></td></tr>
+                <tr><td>流水句</td><td><code>先 A，再 它*2，最后 说（它）。</code></td><td>顺序执行，结果存入 <code>它</code></td></tr>
+                <tr><td>如下函数头</td><td><code>初始化 如下：</code></td><td><code>初始化：输入；</code></td></tr>
+                <tr><td>缺省参数</td><td><code>输入 名字 缺省 为 “路人”</code></td><td><code>名字 = "路人"</code></td></tr>
+                <tr><td>的话后缀</td><td><code>如果 X 的话：</code></td><td><code>if (X)</code></td></tr>
+                <tr><td>自身</td><td><code>此之生命 / 本之生命</code></td><td><code>this.生命</code></td></tr>
+                <tr><td>中文数字索引</td><td><code>名单第二十三项</code></td><td><code>名单[22]</code></td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>十五、标点符号速查</h2>
             <table>
                 <tr><th>标点</th><th>用途</th></tr>
-                <tr><td><code>。</code></td><td>语句结束（相当于分号 ;，可省略）</td></tr>
-                <tr><td><code>：</code></td><td>定义/赋值（相当于等号 =）/ 分支分隔符（如果…：）</td></tr>
+                <tr><td><code>。</code></td><td>语句结束（相当于分号，可省略）</td></tr>
+                <tr><td><code>：</code></td><td>定义/赋值 / 分支分隔符（如果…：）</td></tr>
                 <tr><td><code>；</code></td><td>函数头结束，接函数体</td></tr>
-                <tr><td><code>，</code></td><td>参数分隔 / 同行逻辑或（OR）/ 行末分支分隔符（如果…，）</td></tr>
-                <tr><td><code>、</code></td><td>参数分隔 / 逻辑与（AND）</td></tr>
+                <tr><td><code>，</code></td><td>参数分隔 / 语句分隔 / 行末分支分隔符</td></tr>
+                <tr><td><code>、</code></td><td>函数参数分隔 / 数组元素分隔</td></tr>
                 <tr><td><code>（）</code></td><td>括号分组 / 函数调用</td></tr>
-                <tr><td><code>“”</code></td><td>字符串引号</td></tr>
-                <tr><td><code>【】</code></td><td>方括号字符串（等同引号）</td></tr>
+                <tr><td><code>“”</code></td><td>字符串引号（内部转义 <code>\“</code>）</td></tr>
+                <tr><td><code>【】</code></td><td>数组括号（空数组【】）</td></tr>
             </table>
         </div>
 
         <div class="section">
-            <h2>十一、关键字列表</h2>
+            <h2>十六、关键字总表</h2>
             <table>
                 <tr><th>类别</th><th>关键字</th></tr>
-                <tr><td>控制流</td><td><code>如果</code> <code>若</code> <code>否则</code> <code>重复</code> <code>循环</code> <code>结束</code> <code>次</code> <code>以上</code> <code>选择</code> <code>情况</code></td></tr>
-                <tr><td>循环控制</td><td><code>开始于</code> <code>到</code> <code>为止</code> <code>每次</code></td></tr>
-                <tr><td>函数</td><td><code>输入</code> <code>返回</code> <code>结果是</code> <code>说</code></td></tr>
-                <tr><td>类与对象</td><td><code>类</code> <code>之</code> <code>的</code></td></tr>
-                <tr><td>比较</td><td><code>小于</code> <code>大于</code> <code>等于</code> <code>是</code> <code>不是</code> <code>等价于</code></td></tr>
-                <tr><td>逻辑</td><td><code>并且</code> <code>或者</code> <code>非</code></td></tr>
-                <tr><td>布尔值</td><td><code>正确</code> <code>真</code> <code>对</code> <code>错误</code> <code>错</code> <code>不对</code></td></tr>
-                <tr><td>空值</td><td><code>空</code> <code>没了</code></td></tr>
+                <tr><td>控制流</td><td><code>如果</code> <code>若</code> <code>否则</code> <code>的话</code> <code>选择</code> <code>情况</code> <code>结束</code> <code>以上</code></td></tr>
+                <tr><td>循环</td><td><code>重复</code> <code>循环</code> <code>次</code> <code>开始于</code> <code>到</code> <code>为止</code> <code>每次</code> <code>当</code> <code>直到</code> <code>每当</code> <code>就</code> <code>遍历</code> <code>每个</code></td></tr>
+                <tr><td>函数</td><td><code>输入</code> <code>返回</code> <code>结果是</code> <code>说</code> <code>如下</code> <code>缺省</code> <code>为</code></td></tr>
+                <tr><td>类与对象</td><td><code>类</code> <code>之</code> <code>的</code> <code>此</code> <code>本</code></td></tr>
+                <tr><td>错误处理</td><td><code>尝试</code> <code>如果报错</code> <code>假如报错</code> <code>要是报错</code></td></tr>
+                <tr><td>模块</td><td><code>引入</code> <code>导出</code> <code>作为</code> <code>称作</code></td></tr>
+                <tr><td>异步</td><td><code>等待</code></td></tr>
+                <tr><td>赋值句式</td><td><code>把</code> <code>将</code> <code>设</code> <code>设为</code> <code>增加</code> <code>减少</code></td></tr>
+                <tr><td>成员判断</td><td><code>在</code> <code>不在</code> <code>中</code></td></tr>
+                <tr><td>流水句</td><td><code>先</code> <code>再</code> <code>然后</code> <code>最后</code></td></tr>
+                <tr><td>比较/包含</td><td><code>小于</code> <code>大于</code> <code>小于等于</code> <code>大于等于</code> <code>不大于</code> <code>不小于</code> <code>等于</code> <code>是</code> <code>不是</code> <code>不等于</code> <code>等价于</code> <code>包含</code></td></tr>
+                <tr><td>逻辑</td><td><code>并且</code> <code>而且</code> <code>且</code> <code>以及</code> <code>或者</code> <code>或是</code> <code>或</code> <code>非</code> <code>并非</code></td></tr>
+                <tr><td>索引</td><td><code>第</code> <code>项</code></td></tr>
+                <tr><td>布尔/空</td><td><code>正确</code> <code>真</code> <code>对</code> <code>错误</code> <code>错</code> <code>不对</code> <code>假</code> <code>空</code> <code>没了</code></td></tr>
             </table>
+        </div>
+
+        <div class="section">
+            <h2>十七、错误提示</h2>
+            <p>编译期错误与运行期错误都会输出中文提示，常见情况附带建议（如"变量未定义"、"读取空值属性失败"、"JSON 格式错误"）。未被翻译器识别的引擎错误保留原文并加"运行出错："前缀。</p>
         </div>
     </div>
 </body>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Language="zh-CN" Id="kuguascript-vscode" Version="0.1.0" Publisher="kuguascript" />
+    <DisplayName>苦瓜脚本</DisplayName>
+    <Description xml:space="preserve">苦瓜脚本语言：语法高亮 + 控制台运行（内置编译器）</Description>
+    <Tags>kugua chinese scripting language</Tags>
+    <GalleryFlags />
+    <Properties>
+      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="^1.75.0" />
+      <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+      <Property Id="Microsoft.VisualStudio.Services.Content.Type" Value="free" />
+    </Properties>
+    <License>extension/LICENSE</License>
+    <Icon>extension/icon.png</Icon>
+  </Metadata>
+  <Installations>
+    <Installation Target="Microsoft.VisualStudio.Code">
+      <Version>^1.75.0</Version>
+    </Installation>
+  </Installations>
+  <Dependencies />
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.Code.Manifest" Path="extension/package.json" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.Details" Path="extension/README.md" />
+    <Asset Type="Microsoft.VisualStudio.Services.Content.License" Path="extension/LICENSE" />
+    <Asset Type="Microsoft.VisualStudio.Services.Icons.Default" Path="extension/icon.png" />
+  </Assets>
+</PackageManifest>

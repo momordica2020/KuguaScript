@@ -45,7 +45,17 @@ function runTests() {
 
                 const output = compiler.run(source);
 
-                console.log(output || '(无输出)');
+                if (output && typeof output.then === 'function') {
+                    output.then(function (result) {
+                        console.log(result || '(无输出)');
+                    }).catch(function (e) {
+                        console.error('\n错误:');
+                        console.error('----------------------------------------');
+                        console.error(e.message);
+                    });
+                } else {
+                    console.log(output || '(无输出)');
+                }
 
             } catch (error) {
                 console.error('\n错误:');

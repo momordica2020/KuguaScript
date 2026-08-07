@@ -1,0 +1,116 @@
+{
+  "name": "kuguascript-vscode",
+  "displayName": "苦瓜脚本",
+  "description": "苦瓜脚本语言：语法高亮 + 控制台运行（基于项目内 cli.js）",
+  "version": "0.2.0",
+  "publisher": "kuguascript",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "kugua",
+    "chinese",
+    "scripting",
+    "language"
+  ],
+  "activationEvents": [
+    "onLanguage:kugua",
+    "onCommand:kugua.run",
+    "onCommand:kugua.compile"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "kugua",
+        "aliases": [
+          "苦瓜脚本",
+          "KuguaScript",
+          "kugua"
+        ],
+        "extensions": [
+          ".ks"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "kugua",
+        "scopeName": "source.kugua",
+        "path": "./syntaxes/kugua.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "苦瓜脚本（深色）",
+        "uiTheme": "vs-dark",
+        "path": "./themes/kugua-dark-color-theme.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "kugua.run",
+        "title": "苦瓜脚本：在控制台运行",
+        "category": "苦瓜脚本"
+      },
+      {
+        "command": "kugua.compile",
+        "title": "苦瓜脚本：编译为 JavaScript",
+        "category": "苦瓜脚本"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "kugua.run",
+        "key": "f5",
+        "when": "editorLangId == kugua && editorTextFocus"
+      },
+      {
+        "command": "kugua.compile",
+        "key": "ctrl+f5",
+        "when": "editorLangId == kugua && editorTextFocus"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "kugua.run",
+          "when": "editorLangId == kugua",
+          "group": "navigation"
+        },
+        {
+          "command": "kugua.compile",
+          "when": "editorLangId == kugua",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kugua.run",
+          "when": "resourceExtname == .ks",
+          "group": "navigation"
+        },
+        {
+          "command": "kugua.compile",
+          "when": "resourceExtname == .ks",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "苦瓜脚本",
+      "properties": {
+        "kugua.nodePath": {
+          "type": "string",
+          "default": "node",
+          "description": "Node.js 可执行文件路径（默认使用 PATH 中的 node）"
+        }
+      }
+    }
+  }
+}

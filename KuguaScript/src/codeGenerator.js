@@ -4,28 +4,12 @@
  * 使用 generate(node) 返回字符串的方式替代全局 output 拼接
  */
 const C = require('./constants');
+const RUNTIME_REGISTRY = require('./runtime/registry');
 
-// 沙箱内置全局标识符（KS代码运行时由运行环境提供，代码生成器禁止在顶部var声明，
-// 否则会因var变量提升把它们赋值为undefined，导致读取到undefined后报错）
-const SANDBOX_GLOBALS = new Set([
-    // 输入输出
-    '弹窗', '询问', '确认', '写入',
-    // 数学工具
-    '随机数字', '向下取整', '向上取整', '绝对值', '转整数', '转数字',
-    // 定时器
-    '设置定时器', '清除定时器', '设置循环', '清除循环',
-    'startLoop', 'stopLoop', 'setT', 'clearT',
-    '请求动画帧', '取消动画帧',
-    // 对象
-    '对象', '创建对象',
-    // 运行时环境
-    '文档', '窗口', '本地存储', '会话存储',
-    '数学', '日期', '历史', '控制台', '屏幕', '定位',
-    // 常用辅助
-    '说', '追加', '移除',
-    // 布尔/空值（由编译器识别为字面量，此处防御性列出）
-    '空', '正确', '错误'
-]);
+// 内置全局标识符（来自运行时注册表）：KS代码运行时由宿主环境提供，
+// 代码生成器禁止在顶部 var 声明它们，否则会因变量提升被赋值为 undefined。
+// 新增内置函数时只需在 src/runtime/registry.js 登记名称即可。
+const SANDBOX_GLOBALS = new Set(RUNTIME_REGISTRY.BUILTIN_NAMES);
 
 // 数组/对象成员别名 → JS 属性/方法
 const MEMBER_ALIAS = {
@@ -37,8 +21,63 @@ const MEMBER_ALIAS = {
 };
 
 class CodeGenerator {
-    generate(node) {
+    constructor(options) {
+        this.options = options || {};
+    }
+
+    generate(node, options) {
+        // 每次调用的选项独立生效，不污染构造时的默认选项
+        this._callOptions = options ? Object.assign({}, this.options, options) : this.options;
+        this.topLevelAwait = false;
         return this.visit(node);
+    }
+
+    /**
+     * 判断 AST 子树中是否包含 等待（await）
+     * stopAtFunctions 为 true 时，函数/类内部由它们各自决定是否 async，不向上传播
+     */
+    containsAwait(node, stopAtFunctions) {
+        if (!node) return false;
+        if (node.type === C.NodeType.AwaitExpression) return true;
+        if (stopAtFunctions
+            && (node.type === C.NodeType.FunctionDeclaration || node.type === C.NodeType.ClassDeclaration)) {
+            return false;
+        }
+        for (const key of Object.keys(node)) {
+            const val = node[key];
+            if (Array.isArray(val)) {
+                for (const item of val) {
+                    if (this.containsAwait(item, stopAtFunctions)) return true;
+                }
+            } else if (val && typeof val === 'object' && val.type) {
+                if (this.containsAwait(val, stopAtFunctions)) return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 生成类的对象字面量（{ 属性: 值, 方法: function…, 嵌套类: {...} }）
+     */
+    classObjectLiteral(node) {
+        const body = node.body.body || node.body;
+        const members = body.map(stmt => {
+            if (stmt.type === C.NodeType.FunctionDeclaration) {
+                const params = stmt.params.map(p => {
+                    return p.default ? `${p.name} = ${this.visit(p.default)}` : p.name;
+                }).join(', ');
+                const isAsync = this.containsAwait(stmt.body, true);
+                return `${isAsync ? 'async ' : ''}${stmt.name}: function(${params}) ${this.visit(stmt.body)}`;
+            } else if (stmt.type === C.NodeType.ClassProperty) {
+                return `${stmt.name}: ${this.visit(stmt.value)}`;
+            } else if (stmt.type === C.NodeType.AssignmentExpression) {
+                return `${this.visit(stmt.left)}: ${this.visit(stmt.right)}`;
+            } else if (stmt.type === C.NodeType.ClassDeclaration) {
+                return `${stmt.name}: ${this.classObjectLiteral(stmt)}`;
+            }
+            return null;
+        }).filter(m => m !== null);
+        return `{\n    ${members.join(',\n    ')}\n}`;
     }
 
     /**
@@ -102,6 +141,13 @@ class CodeGenerator {
                     names.add(node.argument.name);
                 }
                 break;
+            case C.NodeType.PipelineStatement:
+                // 流水句的隐式变量"它"
+                names.add('它');
+                for (const step of node.steps || []) {
+                    this._collectVars(step, names);
+                }
+                break;
             default:
                 // 遍历所有对象属性
                 for (const key of Object.keys(node)) {
@@ -121,36 +167,43 @@ class CodeGenerator {
     get visitors() {
         if (!this._visitors) {
             this._visitors = {
-                // 程序根节点 — 注入输入输出模块和工具函数（浏览器与Node兼容）
+                // 程序根节点 — 默认(auto)注入输入输出模块和工具函数（兼容旧用法）；
+                // runtime: 'none' 时不注入，由宿主环境提供内置（runtime/browser.js、runtime/node.js）
                 // 同时在顶部预声明所有全局标识符赋值的变量，避免函数内部赋值产生var遮蔽导致NaN
                 [C.NodeType.Program]: (node) => {
                     // 1. 收集所有赋值左侧的Identifier变量名（不重复，跳过成员赋值）
                     const varNames = new Set();
                     this._collectVars(node, varNames);
 
-                    let code = '(function(console) {\n';
+                    // 顶层包含 等待 时整个程序以 async IIFE 运行
+                    const hasTopAwait = node.body.some(stmt => this.containsAwait(stmt, true));
+                    this.topLevelAwait = hasTopAwait;
+
+                    let code = hasTopAwait ? '(async function(console) {\n' : '(function(console) {\n';
 
                     // 2. 顶部统一预声明所有用户变量
                     if (varNames.size > 0) {
                         code += '    var ' + [...varNames].join(', ') + ';\n';
                     }
 
-                    code += '    // ===== 输入输出模块 =====\n';
-                    code += '    var 弹窗 = typeof alert !== "undefined" ? alert : function(msg) { console.log(msg); };\n';
-                    code += '    var 询问 = typeof prompt !== "undefined" ? prompt : function(msg) { console.log("[输入]" + msg); return "1"; };\n';
-                    code += '    var 确认 = typeof confirm !== "undefined" ? confirm : function(msg) { console.log("[确认]" + msg); return true; };\n';
-                    code += '    var 写入 = typeof document !== "undefined" ? function(msg) { document.write(msg); } : function(msg) { console.log(msg); };\n';
-                    code += '    // ===== 工具函数模块 =====\n';
-                    code += '    var 随机数字 = Math.random;\n';
-                    code += '    var 向下取整 = Math.floor;\n';
-                    code += '    var 向上取整 = Math.ceil;\n';
-                    code += '    var 绝对值 = Math.abs;\n';
-                    code += '    var 转整数 = parseInt;\n';
-                    code += '    var 转数字 = parseFloat;\n';
+                    if (!this._callOptions || this._callOptions.runtime !== 'none') {
+                        code += '    // ===== 输入输出模块 =====\n';
+                        code += '    var 弹窗 = typeof alert !== "undefined" ? alert : function(msg) { console.log(msg); };\n';
+                        code += '    var 询问 = typeof prompt !== "undefined" ? prompt : function(msg) { console.log("[输入]" + msg); return "1"; };\n';
+                        code += '    var 确认 = typeof confirm !== "undefined" ? confirm : function(msg) { console.log("[确认]" + msg); return true; };\n';
+                        code += '    var 写入 = typeof document !== "undefined" ? function(msg) { document.write(msg); } : function(msg) { console.log(msg); };\n';
+                        code += '    // ===== 工具函数模块 =====\n';
+                        code += '    var 随机数字 = Math.random;\n';
+                        code += '    var 向下取整 = Math.floor;\n';
+                        code += '    var 向上取整 = Math.ceil;\n';
+                        code += '    var 绝对值 = Math.abs;\n';
+                        code += '    var 转整数 = parseInt;\n';
+                        code += '    var 转数字 = parseFloat;\n';
+                    }
                     for (const stmt of node.body) {
                         code += '    ' + this.visit(stmt) + '\n';
                     }
-                    code += '})(console);';
+                    code += '\n})(console);';
                     return code;
                 },
 
@@ -193,6 +246,26 @@ class CodeGenerator {
                     return `for (${varName} = 0; ${varName} < ${this.visit(node.right)}; ${varName}++) ${this.visit(node.body)}`;
                 },
 
+                // 遍历 名单 中 的 每个 元素
+                [C.NodeType.ForEachStatement]: (node) => {
+                    return `for (var ${node.name} of ${this.visit(node.collection)}) ${this.visit(node.body)}`;
+                },
+
+                // 当…时（while）
+                [C.NodeType.WhileStatement]: (node) => {
+                    return `while (${this.visit(node.condition)}) ${this.visit(node.body)}`;
+                },
+
+                // 重复 直到…为止（do-while：先执行一次，条件满足后停止）
+                [C.NodeType.DoWhileStatement]: (node) => {
+                    return `do ${this.visit(node.body)} while (!(${this.visit(node.condition)}));`;
+                },
+
+                // 先…再…然后…最后…：每一步结果存入"它"
+                [C.NodeType.PipelineStatement]: (node) => {
+                    return node.steps.map(step => `它 = ${this.visit(step)};`).join('\n');
+                },
+
                 // 返回语句
                 [C.NodeType.ReturnStatement]: (node) => {
                     return `return ${this.visit(node.argument)};`;
@@ -206,10 +279,38 @@ class CodeGenerator {
                 // break 语句
                 [C.NodeType.BreakStatement]: () => 'break;',
 
+                // 尝试…如果报错…（try/catch）
+                [C.NodeType.TryStatement]: (node) => {
+                    let code = `try ${this.visit(node.body)}`;
+                    if (node.catchBody) {
+                        const param = node.errorName || '__kugua_error__';
+                        code += `\ncatch (${param}) ${this.visit(node.catchBody)}`;
+                    }
+                    return code;
+                },
+
+                // 引入：引入 “node:path” 作为 路径。
+                [C.NodeType.ImportDeclaration]: (node) => {
+                    const src = JSON.stringify(node.moduleName);
+                    if (node.name) {
+                        return `var ${node.name} = require(${src});`;
+                    }
+                    return `require(${src});`;
+                },
+
+                // 导出：导出 名字。／导出 名字 作为 别名。
+                [C.NodeType.ExportDeclaration]: (node) => {
+                    const key = JSON.stringify(node.alias || node.name);
+                    return `if (typeof module !== "undefined") module.exports[${key}] = ${node.name};`;
+                },
+
                 // 函数声明
                 [C.NodeType.FunctionDeclaration]: (node) => {
-                    const params = node.params.map(p => p.name).join(', ');
-                    return `function ${node.name}(${params}) ${this.visit(node.body)}`;
+                    const params = node.params.map(p => {
+                        return p.default ? `${p.name} = ${this.visit(p.default)}` : p.name;
+                    }).join(', ');
+                    const isAsync = this.containsAwait(node.body, true);
+                    return `${isAsync ? 'async ' : ''}function ${node.name}(${params}) ${this.visit(node.body)}`;
                 },
 
                 // 类属性
@@ -219,20 +320,7 @@ class CodeGenerator {
 
                 // 类声明 — 名字已在Program顶部预声明，这里直接赋值
                 [C.NodeType.ClassDeclaration]: (node) => {
-                    const body = node.body.body || node.body;
-                    const members = body.map(stmt => {
-                        if (stmt.type === C.NodeType.FunctionDeclaration) {
-                            const params = stmt.params.map(p => p.name).join(', ');
-                            return `${stmt.name}: function(${params}) ${this.visit(stmt.body)}`;
-                        } else if (stmt.type === C.NodeType.ClassProperty) {
-                            return `${stmt.name}: ${this.visit(stmt.value)}`;
-                        } else if (stmt.type === C.NodeType.AssignmentExpression) {
-                            return `${this.visit(stmt.left)}: ${this.visit(stmt.right)}`;
-                        }
-                        return null;
-                    }).filter(m => m !== null);
-
-                    return `${node.name} = {\n    ${members.join(',\n    ')}\n};`;
+                    return `${node.name} = ${this.classObjectLiteral(node)};`;
                 },
 
                 // 表达式语句
@@ -243,7 +331,7 @@ class CodeGenerator {
                 // 赋值表达式 — 统一使用 "左边 = 值" 形式（不再加var）
                 // 所有用户变量名在Program顶部统一预声明（避免函数内赋值产生var遮蔽）
                 [C.NodeType.AssignmentExpression]: (node) => {
-                    return `${this.visit(node.left)} = ${this.visit(node.right)}`;
+                    return `${this.visit(node.left)} ${node.operator || '='} ${this.visit(node.right)}`;
                 },
 
                 // 逻辑表达式
@@ -253,12 +341,21 @@ class CodeGenerator {
 
                 // 二元表达式
                 [C.NodeType.BinaryExpression]: (node) => {
+                    // X 包含 Y → X.includes(Y)
+                    if (node.operator === '包含') {
+                        return `${this.visit(node.left)}.includes(${this.visit(node.right)})`;
+                    }
                     return `(${this.visit(node.left)} ${node.operator} ${this.visit(node.right)})`;
                 },
 
                 // 一元表达式
                 [C.NodeType.UnaryExpression]: (node) => {
                     return `${node.operator}${this.visit(node.argument)}`;
+                },
+
+                // 等待（await）
+                [C.NodeType.AwaitExpression]: (node) => {
+                    return `await ${this.visit(node.argument)}`;
                 },
 
                 // 函数调用 — 使用 generate 返回值的方式，不再 save/restore output
@@ -274,21 +371,30 @@ class CodeGenerator {
                         return `${this.visit(node.object)}[(${this.visit(node.property)} - 1)]`;
                     }
                     let prop = this.visit(node.property);
-                    // 中文方法/属性别名 → JS 原生（如 之长度→.length、之追加→.push）
-                    if (node.property.type === C.NodeType.Identifier && MEMBER_ALIAS[node.property.name]) {
+                    // 中文方法/属性别名 → JS 原生（如 蛇身之长度→.length、蛇身之追加→.push）
+                    // 内置命名空间（路径/列表/文件 等）除外：它们的中文方法原样访问，避免
+                    // 列表之长度 被误译成 列表.length
+                    const isNamespace = node.object.type === C.NodeType.Identifier
+                        && SANDBOX_GLOBALS.has(node.object.name);
+                    if (!isNamespace && node.property.type === C.NodeType.Identifier
+                        && MEMBER_ALIAS[node.property.name]) {
                         prop = MEMBER_ALIAS[node.property.name];
                     }
                     return `${this.visit(node.object)}.${prop}`;
                 },
 
-                // 数组字面量：《元素1、元素2、…》
+                // 数组字面量：【元素1、元素2、…】
                 [C.NodeType.ArrayExpression]: (node) => {
                     const elems = node.elements.map(el => this.visit(el));
                     return `[${elems.join(', ')}]`;
                 },
 
                 // 标识符
-                [C.NodeType.Identifier]: (node) => node.name,
+                [C.NodeType.Identifier]: (node) => {
+                    // 类内自身：此/本 → this
+                    if (node.name === '此' || node.name === '本') return 'this';
+                    return node.name;
+                },
 
                 // 字面量
                 [C.NodeType.Literal]: (node) => {

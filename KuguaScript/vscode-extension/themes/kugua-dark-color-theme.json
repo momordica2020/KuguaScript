@@ -1,0 +1,105 @@
+{
+  "name": "苦瓜脚本（深色）",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1e1e1e",
+    "editor.foreground": "#d4d4d4",
+    "editor.lineHighlightBackground": "#2a2a2a",
+    "editorCursor.foreground": "#f8f8f0",
+    "editor.selectionBackground": "#264f78",
+    "editorIndentGuide.background1": "#404040"
+  },
+  "tokenColors": [
+    {
+      "scope": "comment",
+      "settings": {
+        "foreground": "#6a9955"
+      }
+    },
+    {
+      "scope": "string",
+      "settings": {
+        "foreground": "#ce9178"
+      }
+    },
+    {
+      "scope": "keyword.control.kugua",
+      "settings": {
+        "foreground": "#c586c0",
+        "fontStyle": "bold"
+      }
+    },
+    {
+      "scope": "keyword.operator.kugua",
+      "settings": {
+        "foreground": "#569cd6"
+      }
+    },
+    {
+      "scope": "keyword.other.kugua",
+      "settings": {
+        "foreground": "#569cd6"
+      }
+    },
+    {
+      "scope": "constant.numeric.kugua",
+      "settings": {
+        "foreground": "#b5cea8"
+      }
+    },
+    {
+      "scope": "constant.language.boolean.kugua",
+      "settings": {
+        "foreground": "#dcdcaa"
+      }
+    },
+    {
+      "scope": "constant.language.null.kugua",
+      "settings": {
+        "foreground": "#dcdcaa"
+      }
+    },
+    {
+      "scope": "entity.name.function.kugua",
+      "settings": {
+        "foreground": "#dcdcaa"
+      }
+    },
+    {
+      "scope": "variable.other.kugua",
+      "settings": {
+        "foreground": "#9cdcfe"
+      }
+    },
+    {
+      "scope": "punctuation.terminator.kugua",
+      "settings": {
+        "foreground": "#808080"
+      }
+    },
+    {
+      "scope": "punctuation.separator.kugua",
+      "settings": {
+        "foreground": "#808080"
+      }
+    },
+    {
+      "scope": "punctuation.accessor.kugua",
+      "settings": {
+        "foreground": "#808080"
+      }
+    },
+    {
+      "scope": "punctuation.section.group.kugua",
+      "settings": {
+        "foreground": "#d4d4d4"
+      }
+    },
+    {
+      "scope": "punctuation.section.array.kugua",
+      "settings": {
+        "foreground": "#d4d4d4"
+      }
+    }
+  ]
+}

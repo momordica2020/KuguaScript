@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>苦瓜脚本 · 网页示例</title>
+<style>
+    body { font-family: "Microsoft YaHei", sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+    button { font-size: 16px; padding: 8px 20px; cursor: pointer; }
+    #out { margin-top: 16px; font-size: 18px; color: #333; }
+    pre { background: #f5f5f5; padding: 12px; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<h1>苦瓜脚本 · 网页示例</h1>
+<p>这个页面用苦瓜脚本实现了一个按钮计数器，完全不需要手写 JavaScript。</p>
+<p style="color:#b45309;background:#fef3c7;padding:10px;border-radius:6px">
+    提示：请通过服务器访问本示例（<code>npm start</code> 后打开
+    <code>http://localhost:3002/examples/web/index.html</code>）。
+    直接用浏览器打开文件（<code>file://</code>）时，仅内联脚本可用，
+    外部 <code>.ks</code> 文件无法加载。
+</p>
+<button id="按钮">点我</button>
+<p id="输出">还没有点击。</p>
+
+<script src="/editor/kugua-compiler.js"></script>
+<script src="/editor/kugua-loader.js"></script>
+
+<!-- 内联苦瓜脚本 -->
+<script type="text/kugua">
+说（“页面已就绪，苦瓜脚本运行中！”）。
+按钮：文档之获取元素按id（“按钮”）。
+输出：文档之获取元素按id（“输出”）。
+点击次数：0。
+
+按键处理：输入 事件；
+    点击次数：点击次数 + 1。
+    输出之设置文本（“已点击 ” + 点击次数 + “ 次”）。
+    如果 点击次数 大于等于 5：
+        输出之设置文本（“够了够了，休息一下吧。”）。
+
+按钮之添加事件监听（“click”，按键处理）。
+</script>
+
+<!-- 外部 .ks 文件（由加载器自动编译执行） -->
+<script type="text/kugua" src="外部脚本.ks"></script>
+
+</body>
+</html>

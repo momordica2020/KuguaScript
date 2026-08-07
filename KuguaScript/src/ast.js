@@ -32,6 +32,22 @@ function createForOfStatement(left, right, body) {
     return createNode(NodeType.ForOfStatement, { left, right, body });
 }
 
+function createForEachStatement(name, collection, body) {
+    return createNode(NodeType.ForEachStatement, { name, collection, body });
+}
+
+function createWhileStatement(condition, body) {
+    return createNode(NodeType.WhileStatement, { condition, body });
+}
+
+function createDoWhileStatement(condition, body) {
+    return createNode(NodeType.DoWhileStatement, { condition, body });
+}
+
+function createPipelineStatement(steps) {
+    return createNode(NodeType.PipelineStatement, { steps });
+}
+
 function createReturnStatement(argument) {
     return createNode(NodeType.ReturnStatement, { argument });
 }
@@ -42,6 +58,18 @@ function createPrintStatement(argument) {
 
 function createBreakStatement() {
     return createNode(NodeType.BreakStatement);
+}
+
+function createTryStatement(body, catchBody, errorName) {
+    return createNode(NodeType.TryStatement, { body, catchBody, errorName });
+}
+
+function createImportDeclaration(moduleName, name) {
+    return createNode(NodeType.ImportDeclaration, { moduleName, name });
+}
+
+function createExportDeclaration(name, alias) {
+    return createNode(NodeType.ExportDeclaration, { name, alias });
 }
 
 function createArrayExpression(elements) {
@@ -64,8 +92,8 @@ function createExpressionStatement(expression) {
     return createNode(NodeType.ExpressionStatement, { expression });
 }
 
-function createAssignmentExpression(left, right) {
-    return createNode(NodeType.AssignmentExpression, { left, right });
+function createAssignmentExpression(left, right, operator) {
+    return createNode(NodeType.AssignmentExpression, { left, right, operator });
 }
 
 function createLogicalExpression(operator, left, right) {
@@ -78,6 +106,10 @@ function createBinaryExpression(operator, left, right) {
 
 function createUnaryExpression(operator, argument) {
     return createNode(NodeType.UnaryExpression, { operator, argument });
+}
+
+function createAwaitExpression(argument) {
+    return createNode(NodeType.AwaitExpression, { argument });
 }
 
 function createCallExpression(callee, args) {
@@ -112,9 +144,16 @@ module.exports = {
     createIfStatement,
     createForStatement,
     createForOfStatement,
+    createForEachStatement,
+    createWhileStatement,
+    createDoWhileStatement,
+    createPipelineStatement,
     createReturnStatement,
     createPrintStatement,
     createBreakStatement,
+    createTryStatement,
+    createImportDeclaration,
+    createExportDeclaration,
     createArrayExpression,
     createFunctionDeclaration,
     createClassDeclaration,
@@ -124,6 +163,7 @@ module.exports = {
     createLogicalExpression,
     createBinaryExpression,
     createUnaryExpression,
+    createAwaitExpression,
     createCallExpression,
     createMemberExpression,
     createIdentifier,

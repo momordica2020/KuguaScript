@@ -61,21 +61,21 @@ const server = http.createServer((req, res) => {
         req.on('end', () => {
             try {
                 const data = JSON.parse(body);
-                
-                const logs = [];
-                const originalLog = console.log;
-                console.log = function(...args) {
-                    logs.push(args.join(' '));
-                };
-                
-                try {
-                    compiler.run(data.source);
-                } finally {
-                    console.log = originalLog;
+                // compiler.run 返回全部日志（编译产物使用传入的 console 参数）
+                const output = compiler.run(data.source);
+                // 含顶层 等待 的脚本返回 Promise，等待完成后再响应
+                if (output && typeof output.then === 'function') {
+                    output.then(function (result) {
+                        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ output: result }));
+                    }).catch(function (e) {
+                        res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+                        res.end(JSON.stringify({ error: e.message }));
+                    });
+                } else {
+                    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify({ output }));
                 }
-                
-                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                res.end(JSON.stringify({ output: logs.join('\n') }));
             } catch (error) {
                 res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
                 res.end(JSON.stringify({ error: error.message }));
@@ -119,46 +119,39 @@ const server = http.createServer((req, res) => {
     // 文件树接口（递归列出 test 目录）
     if (pathname === '/tree' && req.method === 'GET') {
         const testDir = path.join(__dirname, 'test');
-        (function walk(dir) {
-            fs.readdir(dir, { withFileTypes: true }, (err, entries) => {
-                if (err) {
-                    res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
-                    res.end(JSON.stringify({ error: err.message }));
-                    return;
-                }
-                const nodes = [];
-                entries.sort((a, b) => {
-                    if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? 1 : -1;
-                    return a.name.localeCompare(b.name, 'zh-CN');
-                });
-                let pending = entries.length;
-                if (pending === 0) {
-                    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                    res.end(JSON.stringify(nodes));
-                    return;
-                }
-                entries.forEach(entry => {
-                    const abs = path.join(dir, entry.name);
-                    const rel = path.relative(testDir, abs);
-                    if (entry.isDirectory()) {
-                        walk(abs);
-                    } else {
-                        const stats = fs.statSync(abs);
-                        nodes.push({
-                            name: entry.name,
-                            path: rel.split(path.sep).join('/'),
-                            type: 'file',
-                            size: stats.size,
-                            modified: stats.mtime.toLocaleString('zh-CN')
-                        });
-                        if (--pending === 0) {
-                            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
-                            res.end(JSON.stringify(nodes));
-                        }
-                    }
-                });
+        // 同步递归构建文件树（文件夹在前，文件按中文排序）
+        function buildTree(dir) {
+            const nodes = [];
+            const entries = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => {
+                if (a.isDirectory() !== b.isDirectory()) return a.isDirectory() ? 1 : -1;
+                return a.name.localeCompare(b.name, 'zh-CN');
             });
-        })(testDir);
+            for (const entry of entries) {
+                const abs = path.join(dir, entry.name);
+                const rel = path.relative(testDir, abs).split(path.sep).join('/');
+                if (entry.isDirectory()) {
+                    nodes.push({ name: entry.name, path: rel, type: 'folder' });
+                    nodes.push(...buildTree(abs));
+                } else if (entry.name.endsWith('.ks')) {
+                    const stats = fs.statSync(abs);
+                    nodes.push({
+                        name: entry.name,
+                        path: rel,
+                        type: 'file',
+                        size: stats.size,
+                        modified: stats.mtime.toLocaleString('zh-CN')
+                    });
+                }
+            }
+            return nodes;
+        }
+        try {
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(buildTree(testDir)));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
         return;
     }
 

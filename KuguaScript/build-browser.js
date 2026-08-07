@@ -1,37 +1,57 @@
 // 浏览器版编译器构建脚本
 const fs = require('fs');
 
-const files = ['constants.js', 'ast.js', 'lexer.js', 'parser.js', 'codeGenerator.js', 'compiler.js'];
+const files = ['errors.js', 'constants.js', 'ast.js', 'lexer.js', 'parser.js', 'runtime/registry.js', 'codeGenerator.js', 'compiler.js'];
 const labels = {
+    'errors.js': '错误信息翻译器',
     'constants.js': '常量定义',
     'ast.js': 'AST 节点工厂函数',
     'lexer.js': '词法分析器',
     'parser.js': '语法分析器',
+    'runtime/registry.js': '运行时注册表',
     'codeGenerator.js': '代码生成器',
     'compiler.js': '编译器主入口'
 };
 
 // 浏览器版 Compiler（移除 fs 依赖的方法）
-const browserCompiler = `class Compiler {
-    constructor() {
+const browserCompiler = `
+// 恢复被脚本覆盖的内置全局（同步/异步共用）
+function restoreGlobals(names, snapshot) {
+    for (let i = 0; i < names.length; i++) {
+        const n = names[i];
+        if (snapshot[n]) {
+            try { Object.defineProperty(globalThis, n, snapshot[n]); }
+            catch (e) { globalThis[n] = snapshot[n].value; }
+        } else if (Object.prototype.hasOwnProperty.call(globalThis, n)) {
+            try { delete globalThis[n]; } catch (e) { /* 不可删除时忽略 */ }
+        }
+    }
+}
+
+class Compiler {
+    constructor(options) {
+        this.options = options || {};
         this.lexer = null;
         this.parser = null;
-        this.codeGenerator = new CodeGenerator();
+        this.codeGenerator = new CodeGenerator(this.options);
     }
 
-    compile(source) {
+    compile(source, options) {
         this.lexer = new Lexer(source);
         const tokens = this.lexer.tokenize();
 
         this.parser = new Parser(tokens);
         const ast = this.parser.parse();
 
-        const jsCode = this.codeGenerator.generate(ast);
+        const jsCode = this.codeGenerator.generate(ast, options);
         return jsCode;
     }
 
-    run(source, outputCallback) {
-        const jsCode = this.compile(source);
+    run(source, outputCallback, options) {
+        const opts = Object.assign({ runtime: 'none' }, options);
+        const jsCode = this.compile(source, opts);
+        // 顶层包含 等待 时，编译产物是 async IIFE，run 需要等待其完成
+        const asyncMode = this.codeGenerator.topLevelAwait;
 
         const logs = [];
         const mockConsole = {
@@ -44,7 +64,46 @@ const browserCompiler = `class Compiler {
             }
         };
 
-        new Function('console', jsCode)(mockConsole);
+        // 运行期间用户可能给内置名赋值，结束后恢复，避免污染同一页面中的后续运行
+        const names = RUNTIME_REGISTRY.BUILTIN_NAMES;
+        const snapshot = {};
+        for (let i = 0; i < names.length; i++) {
+            const n = names[i];
+            const desc = Object.getOwnPropertyDescriptor(globalThis, n);
+            if (desc) snapshot[n] = desc;
+        }
+        let returnedPromise = false;
+        try {
+            try {
+                // 引入 语句需要 require；浏览器环境不支持模块加载，给出中文提示
+                const fn = new Function('console', 'require', asyncMode ? 'return ' + jsCode : jsCode);
+                const result = fn(mockConsole, function (id) {
+                    throw new Error('浏览器运行时不支持 引入（' + id + '），请在 Node.js 或打包工具（Vite/esbuild）中使用');
+                });
+                if (result && typeof result.then === 'function') {
+                    returnedPromise = true;
+                    return result
+                        .catch(function (e) { throw ErrorTranslator.wrapRuntimeError(e); })
+                        .finally(function () { restoreGlobals(names, snapshot); })
+                        .then(function () { return logs.join('\\n'); });
+                }
+            } catch (e) {
+                // 执行期错误翻译成中文（保留原始堆栈）
+                throw ErrorTranslator.wrapRuntimeError(e);
+            }
+        } finally {
+            if (!returnedPromise) {
+                for (let i = 0; i < names.length; i++) {
+                    const n = names[i];
+                    if (snapshot[n]) {
+                        try { Object.defineProperty(globalThis, n, snapshot[n]); }
+                        catch (e) { globalThis[n] = snapshot[n].value; }
+                    } else if (Object.prototype.hasOwnProperty.call(globalThis, n)) {
+                        try { delete globalThis[n]; } catch (e) { /* 不可删除时忽略 */ }
+                    }
+                }
+            }
+        }
         return logs.join('\\n');
     }
 }`;
@@ -52,20 +111,23 @@ const browserCompiler = `class Compiler {
 // C 和 AST 聚合对象（替代 require 的作用）
 const cAggregator = `const C = {
     TokenType, NodeType, ControlKeywords, LoopKeywords, FunctionKeywords,
-    ObjectKeywords, AccessKeywords, ComparisonOperators, EqualityOperators,
+    ObjectKeywords, ModuleKeywords, SentenceKeywords, AccessKeywords, ComparisonOperators, EqualityOperators,
     LogicalAndKeywords, LogicalOrKeywords, LogicalNotKeywords, OperatorKeywords,
-    BooleanKeywords,
-    NullKeywords, IfAliases, ReturnAliases, AllKeywords, ReservedKeywords,
+    ContainsOperators, BooleanKeywords,
+    NullKeywords, ChineseNumeralChars, IfAliases, ReturnAliases, AllKeywords, ReservedKeywords,
     Operators, Punctuations, LeftParen, RightParen, isWhitespace, isDigit,
-    isIdentifierStart, isIdentifierPart, LeftArrayBracket, RightArrayBracket
+    isIdentifierStart, isIdentifierPart, isChineseNumeralChar, chineseToNumber,
+    LeftArrayBracket, RightArrayBracket
 };`;
 
 const astAggregator = `const AST = {
     createNode, createToken, createProgram, createBlockStatement, createIfStatement,
-    createForStatement, createForOfStatement, createReturnStatement, createPrintStatement,
-    createBreakStatement, createFunctionDeclaration, createClassDeclaration, createClassProperty,
+    createForStatement, createForOfStatement, createForEachStatement, createWhileStatement, createDoWhileStatement,
+    createPipelineStatement, createReturnStatement, createPrintStatement,
+    createBreakStatement, createTryStatement, createImportDeclaration, createExportDeclaration,
+    createFunctionDeclaration, createClassDeclaration, createClassProperty,
     createExpressionStatement, createAssignmentExpression, createLogicalExpression,
-    createBinaryExpression, createUnaryExpression, createCallExpression, createMemberExpression,
+    createBinaryExpression, createUnaryExpression, createAwaitExpression, createCallExpression, createMemberExpression,
     createIdentifier, createLiteral, createVariableDeclaration, createUpdateExpression,
     createArrayExpression
 };`;
@@ -107,6 +169,7 @@ output += 'global.KuguaCompiler = Compiler;\n';
 output += 'global.KuguaLexer = Lexer;\n';
 output += 'global.KuguaParser = Parser;\n';
 output += 'global.KuguaCodeGenerator = CodeGenerator;\n';
+output += 'global.KuguaErrors = ErrorTranslator;\n';
 output += '})(typeof window !== "undefined" ? window : globalThis);\n';
 
 fs.writeFileSync('editor/kugua-compiler.js', output);

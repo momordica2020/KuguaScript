@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "description": "苦瓜脚本语言 - 纯中文脚本语言编译器",
   "main": "src/compiler.js",
+  "bin": {
+    "kugua": "cli.js"
+  },
   "scripts": {
     "compile": "node cli.js",
     "test": "node test/runner.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node build-browser.js && node build-loader.js"
   },
   "keywords": [
     "compiler",
